@@ -34,6 +34,32 @@ such wiring.
 `JSONResponse`, so streaming, SSE, file and redirect responses pass through untouched.
 A middleware would have had to re-buffer every response body to tell them apart.
 
+## 2026-09-05 — chat pipeline (ported from Thanarak-q/MatthewAPI)
+
+**Quota reserves before the call, reconciles after.** The source repo checked usage
+before the provider call and wrote it in a `BackgroundTask` after, so N concurrent
+requests all read the same pre-call total and all passed — the limit was advisory.
+Now: `INCRBY` an estimate (prompt chars/4 + `max_tokens`), reject and roll back if it
+breaks the limit, then `INCRBY (actual - estimate)` once the provider reports usage.
+Consequence: the estimate must never undershoot badly or bursts overspend between
+reserve and settle; `llm_output_reserve` is the knob.
+
+**Redis holds the counter, MySQL holds the truth.** The source repo's counters carried
+a 24h TTL, so an expiry silently reset usage to zero. The counter now has no TTL and is
+re-seeded from `llm_quotas.token_used` with `SET NX` whenever the key is absent.
+
+**Model whitelist in the DB, cached in Redis (300s).** Was a hardcoded
+`ALLOWED_MODELS` list in settings — changing it needed a redeploy. Fail-closed: an
+empty table allows nothing, so the migration seeds `gpt-4o` and `gpt-4.1`.
+
+**httpx, not the `openai` SDK.** The pipeline makes one POST to an OpenAI-compatible
+`/chat/completions`. A vendor SDK for one request buys retries we do not want in front
+of a quota reservation.
+
+**Usage is written in the request transaction, not a background task.** The source repo
+opened a second session from a fire-and-forget task; a failure there lost the accounting
+silently. Here `get_session` already owns the transaction.
+
 ## Out of scope until asked
 
 - Multi-user, workspaces, invitations. `user_id` columns exist so adding it later is a

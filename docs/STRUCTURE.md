@@ -14,6 +14,7 @@ api/
     ├── envelope.py           Envelope[T] · EnvelopeRoute · AppError · handlers
     ├── models.py             every ORM table imported here for autogenerate
     ├── routers/{f}.py        HTTP only — no business logic
+    ├── services/{f}.py       the domain work; receives a session, owns the transaction
     ├── repos/{f}.py          async module functions, SQLAlchemy lives only here
     └── constants/
 tests/                        pytest, asyncio_mode=auto
@@ -42,7 +43,8 @@ web/
 | sqlalchemy             | 2.0.52 (async) · aiomysql 0.3.2                                           |
 | alembic                | 1.19.2                                                                    |
 | pydantic               | 2.13.5 · pydantic-settings 2.15.0                                         |
-| ruff                   | 0.16.6 · pytest 9.1.1 · pytest-asyncio 1.4.0 · httpx 0.28.1               |
+| httpx                  | 0.28.1 (runtime — the LLM provider call, not just tests)                  |
+| ruff                   | 0.16.6 · pytest 9.1.1 · pytest-asyncio 1.4.0                              |
 | Bun                    | 1.3.14 · Node 24.19.0                                                     |
 | vite                   | 8.2.2 · @vitejs/plugin-react 6.1.1                                        |
 | react                  | 19.2.8 · babel-plugin-react-compiler 1.0.0 · @rolldown/plugin-babel 0.2.3 |
@@ -59,6 +61,7 @@ web/
 1. `api/app/models.py` — table with domain prefix + `user_id`.
 2. `alembic revision --autogenerate` — read the generated migration, MySQL autogenerate misses type changes.
 3. `api/app/repos/{domain}.py` — async functions, `session` first, scope by `user_id`, no commit.
-4. `api/app/routers/{domain}.py` — validate in, call the repo/service, return the DTO; the route class adds the envelope.
-5. `bun run gen:api` with the API running — never hand-write the response type in web.
-6. `web/src/pages/{page}/` — page folder with its own `hooks/`.
+4. `api/app/services/{domain}.py` — the work, if it is more than one repo call.
+5. `api/app/routers/{domain}.py` — validate in, call the repo/service, return the DTO; the route class adds the envelope.
+6. `bun run gen:api` with the API running — never hand-write the response type in web.
+7. `web/src/pages/{page}/` — page folder with its own `hooks/`.

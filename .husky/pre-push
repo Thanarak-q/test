@@ -1,0 +1,2 @@
+bun --cwd web run typecheck
+uv run --directory api ruff check .

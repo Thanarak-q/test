@@ -1,0 +1,40 @@
+{
+  "name": "matthew",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "web": "bun --cwd web run dev",
+    "api": "uv run --directory api uvicorn app.main:app --reload --port 8000",
+    "typecheck": "bun --cwd web run typecheck",
+    "lint": "bun --cwd web run lint && uv run --directory api ruff check .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "bun --cwd web run test && uv run --directory api pytest -q"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.2",
+    "@commitlint/config-conventional": "21.2.2",
+    "husky": "9.1.7",
+    "lint-staged": "17.4.1",
+    "prettier": "3.9.6",
+    "prettier-plugin-organize-imports": "4.3.0",
+    "prettier-plugin-tailwindcss": "0.8.1"
+  },
+  "lint-staged": {
+    "web/**/*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{json,md,css,yml,yaml}": [
+      "prettier --write"
+    ],
+    "api/**/*.py": [
+      "uv run --project api ruff check --fix",
+      "uv run --project api ruff format"
+    ]
+  }
+}

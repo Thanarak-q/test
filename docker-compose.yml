@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: matthew
+      MYSQL_DATABASE: matthew
+      MYSQL_USER: matthew
+      MYSQL_PASSWORD: matthew
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "3310:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pmatthew"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  mysql_data:

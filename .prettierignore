@@ -1,0 +1,7 @@
+bun.lock
+uv.lock
+api/
+web/dist/
+web/src/routeTree.gen.ts
+web/src/api/generated/
+coverage/

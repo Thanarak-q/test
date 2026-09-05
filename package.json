@@ -7,13 +7,14 @@
   ],
   "scripts": {
     "prepare": "husky",
-    "web": "bun --cwd web run dev",
+    "web": "bun run --cwd web dev",
     "api": "uv run --directory api uvicorn app.main:app --reload --port 8000",
-    "typecheck": "bun --cwd web run typecheck",
-    "lint": "bun --cwd web run lint && uv run --directory api ruff check .",
+    "gates": "bun run typecheck && bun run lint && bun run test && bun run format:check && bun run --cwd web build",
+    "typecheck": "bun run --cwd web typecheck",
+    "lint": "bun run --cwd web lint && uv run --directory api ruff check .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "bun --cwd web run test && uv run --directory api pytest -q"
+    "test": "bun run --cwd web test && uv run --directory api pytest -q"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.2",

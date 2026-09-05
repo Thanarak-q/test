@@ -29,4 +29,7 @@ Rules that must not be broken. Details live in `docs/STRUCTURE.md`, rationale in
 
 ## Gates before commit
 
-`bun run typecheck` · `bun run lint` · `bun run test` · `bun run format:check` · `bun --cwd web run build`
+`bun run gates` — typecheck · lint · test · format:check · web build, in one command.
+
+`bun --cwd web run X` silently exits 0 without running anything (bun 1.3.14). The flag
+goes after the subcommand: `bun run --cwd web X`.

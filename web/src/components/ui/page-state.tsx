@@ -1,0 +1,40 @@
+import { CircleAlert, LockKeyhole, RefreshCw } from "lucide-react";
+import { z } from "zod";
+
+export const previewSchema = z
+  .enum(["normal", "empty", "loading", "error", "session"])
+  .catch("normal")
+  .optional();
+export type PreviewState = z.infer<typeof previewSchema>;
+
+export const PageState = ({ state, onRetry }: { state: PreviewState; onRetry: () => void }) => {
+  if (state === "loading")
+    return (
+      <div className="loading-state" role="status" aria-label="Loading dashboard">
+        <span className="sr-only">Loading dashboard…</span>
+        {[0, 1, 2, 3, 4].map((index) => (
+          <div className="skeleton-row" key={index}>
+            <span />
+            <span />
+            <span />
+          </div>
+        ))}
+      </div>
+    );
+  const session = state === "session";
+  return (
+    <div className="empty-state" role="alert">
+      <div className="state-icon">{session ? <LockKeyhole /> : <CircleAlert />}</div>
+      <h2>{session ? "Your session has expired" : "We couldn't load this page"}</h2>
+      <p>
+        {session
+          ? "Your keys haven't changed. Reopen the demo to continue."
+          : "Your data hasn't changed. Try loading the page again."}
+      </p>
+      <button className="button button-secondary" onClick={onRetry}>
+        <RefreshCw />
+        {session ? "Reopen demo" : "Try again"}
+      </button>
+    </div>
+  );
+};

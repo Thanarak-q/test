@@ -1,0 +1,441 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-05T09:36:19.615179+00:00",
+  "title": "Design System: Mathew AI API dashboard",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Background",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "foreground": {
+        "role": "primary",
+        "displayName": "Foreground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Foreground",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Sidebar",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "surface-hover": {
+        "role": "neutral",
+        "displayName": "Surface Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "control-border": {
+        "role": "neutral",
+        "displayName": "Control Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15.00% 0.1150 293.71)",
+          "oklch(26.43% 0.1150 293.71)",
+          "oklch(37.86% 0.1150 293.71)",
+          "oklch(49.29% 0.1150 293.71)",
+          "oklch(60.71% 0.1150 293.71)",
+          "oklch(72.14% 0.1150 293.71)",
+          "oklch(83.57% 0.1150 293.71)",
+          "oklch(95.00% 0.1150 293.71)"
+        ]
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "Success",
+        "tonalRamp": [
+          "oklch(15.00% 0.0650 159.44)",
+          "oklch(26.43% 0.0650 159.44)",
+          "oklch(37.86% 0.0650 159.44)",
+          "oklch(49.29% 0.0650 159.44)",
+          "oklch(60.71% 0.0650 159.44)",
+          "oklch(72.14% 0.0650 159.44)",
+          "oklch(83.57% 0.0650 159.44)",
+          "oklch(95.00% 0.0650 159.44)"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Danger",
+        "tonalRamp": [
+          "oklch(15.00% 0.0910 24.16)",
+          "oklch(26.43% 0.0910 24.16)",
+          "oklch(37.86% 0.0910 24.16)",
+          "oklch(49.29% 0.0910 24.16)",
+          "oklch(60.71% 0.0910 24.16)",
+          "oklch(72.14% 0.0910 24.16)",
+          "oklch(83.57% 0.0910 24.16)",
+          "oklch(95.00% 0.0910 24.16)"
+        ]
+      },
+      "focus": {
+        "role": "neutral",
+        "displayName": "Focus",
+        "tonalRamp": [
+          "oklch(15.00% 0.0873 294.75)",
+          "oklch(26.43% 0.0873 294.75)",
+          "oklch(37.86% 0.0873 294.75)",
+          "oklch(49.29% 0.0873 294.75)",
+          "oklch(60.71% 0.0873 294.75)",
+          "oklch(72.14% 0.0873 294.75)",
+          "oklch(83.57% 0.0873 294.75)",
+          "oklch(95.00% 0.0873 294.75)"
+        ]
+      },
+      "primary-ink": {
+        "role": "primary",
+        "displayName": "Primary Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Primary Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "primary-active": {
+        "role": "primary",
+        "displayName": "Primary Active",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "danger-action": {
+        "role": "neutral",
+        "displayName": "Danger Action",
+        "tonalRamp": [
+          "oklch(15.00% 0.1344 27.04)",
+          "oklch(26.43% 0.1344 27.04)",
+          "oklch(37.86% 0.1344 27.04)",
+          "oklch(49.29% 0.1344 27.04)",
+          "oklch(60.71% 0.1344 27.04)",
+          "oklch(72.14% 0.1344 27.04)",
+          "oklch(83.57% 0.1344 27.04)",
+          "oklch(95.00% 0.1344 27.04)"
+        ]
+      },
+      "danger-hover": {
+        "role": "neutral",
+        "displayName": "Danger Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.1461 27.54)",
+          "oklch(26.43% 0.1461 27.54)",
+          "oklch(37.86% 0.1461 27.54)",
+          "oklch(49.29% 0.1461 27.54)",
+          "oklch(60.71% 0.1461 27.54)",
+          "oklch(72.14% 0.1461 27.54)",
+          "oklch(83.57% 0.1461 27.54)",
+          "oklch(95.00% 0.1461 27.54)"
+        ]
+      },
+      "chart": {
+        "role": "secondary",
+        "displayName": "Chart",
+        "tonalRamp": [
+          "oklch(15.00% 0.1097 296.33)",
+          "oklch(26.43% 0.1097 296.33)",
+          "oklch(37.86% 0.1097 296.33)",
+          "oklch(49.29% 0.1097 296.33)",
+          "oklch(60.71% 0.1097 296.33)",
+          "oklch(72.14% 0.1097 296.33)",
+          "oklch(83.57% 0.1097 296.33)",
+          "oklch(95.00% 0.1097 296.33)"
+        ]
+      },
+      "chart-hover": {
+        "role": "secondary",
+        "displayName": "Chart Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.1010 296.34)",
+          "oklch(26.43% 0.1010 296.34)",
+          "oklch(37.86% 0.1010 296.34)",
+          "oklch(49.29% 0.1010 296.34)",
+          "oklch(60.71% 0.1010 296.34)",
+          "oklch(72.14% 0.1010 296.34)",
+          "oklch(83.57% 0.1010 296.34)",
+          "oklch(95.00% 0.1010 296.34)"
+        ]
+      },
+      "inset": {
+        "role": "neutral",
+        "displayName": "Inset",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      },
+      "notice": {
+        "role": "neutral",
+        "displayName": "Notice",
+        "tonalRamp": [
+          "oklch(15.00% 0.0000 0.00)",
+          "oklch(26.43% 0.0000 0.00)",
+          "oklch(37.86% 0.0000 0.00)",
+          "oklch(49.29% 0.0000 0.00)",
+          "oklch(60.71% 0.0000 0.00)",
+          "oklch(72.14% 0.0000 0.00)",
+          "oklch(83.57% 0.0000 0.00)",
+          "oklch(95.00% 0.0000 0.00)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section and empty-state headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base interface text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Compact button labels."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Credentials and code."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "control-transition",
+        "value": "160ms ease-out",
+        "purpose": "Background, text, and border color changes; disabled under reduced motion."
+      },
+      {
+        "name": "loading-pulse",
+        "value": "1.5s ease-in-out infinite alternate",
+        "purpose": "Loading placeholder pulse; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      },
+      {
+        "name": "mobile",
+        "value": "760px"
+      }
+    ],
+    "containerQueries": [
+      {
+        "name": "key-table-overflow-cue",
+        "value": "880px",
+        "purpose": "Show the key table scroll-and-actions hint at or below this content width."
+      }
+    ],
+    "focus": {
+      "value": "2px solid var(--focus)",
+      "offset": "3px; 2px for fields"
+    },
+    "backdrop": {
+      "value": "rgb(0 0 0 / 62%)",
+      "purpose": "Native modal and navigation drawer backdrop."
+    },
+    "tonalRampNote": "Synthesized OKLCH ramps are inspection aids, not additional shipped tokens."
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact primary button.",
+      "html": "<button class=\"ds-button-primary\">Create new secret key</button>",
+      "css": ".ds-button-primary{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:33px;padding:6px 12px;border:1px solid transparent;border-radius:var(--radius,8px);font-size:12px;line-height:1.5;font-weight:500;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;background:var(--foreground,#ededed);color:#161616;}.ds-button-primary:hover:not(:disabled){background:#fff}.ds-button-primary:focus-visible{outline:2px solid var(--focus,#c7b9f7);outline-offset:3px;}.ds-button-primary:disabled{opacity:.42;cursor:not-allowed}.ds-button-primary:active:not(:disabled){background:#d1d1d1}@media(max-width:760px){.ds-button-primary{min-height:38px}}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none}}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Compact secondary button.",
+      "html": "<button class=\"ds-button-secondary\">Cancel</button>",
+      "css": ".ds-button-secondary{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:33px;padding:6px 12px;border:1px solid transparent;border-radius:var(--radius,8px);font-size:12px;line-height:1.5;font-weight:500;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;background:transparent;color:var(--foreground,#ededed);border-color:var(--control-border,#535353);}.ds-button-secondary:hover:not(:disabled){background:var(--surface-hover,#303030)}.ds-button-secondary:focus-visible{outline:2px solid var(--focus,#c7b9f7);outline-offset:3px;}.ds-button-secondary:disabled{opacity:.42;cursor:not-allowed}@media(max-width:760px){.ds-button-secondary{min-height:38px}}@media(prefers-reduced-motion:reduce){.ds-button-secondary{transition:none}}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Compact danger button.",
+      "html": "<button class=\"ds-button-danger\">Revoke key</button>",
+      "css": ".ds-button-danger{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:33px;padding:6px 12px;border:1px solid transparent;border-radius:var(--radius,8px);font-size:12px;line-height:1.5;font-weight:500;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;background:#a13d36;color:#fff;}.ds-button-danger:hover:not(:disabled){background:#b6473e}.ds-button-danger:focus-visible{outline:2px solid var(--focus,#c7b9f7);outline-offset:3px;}.ds-button-danger:disabled{opacity:.42;cursor:not-allowed}@media(max-width:760px){.ds-button-danger{min-height:38px}}@media(prefers-reduced-motion:reduce){.ds-button-danger{transition:none}}"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "button-icon",
+      "description": "Quiet labeled row or dialog action.",
+      "html": "<button class=\"ds-icon\" aria-label=\"Close dialog\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg></button>",
+      "css": ".ds-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:6px;background:transparent;border:0;border-radius:6px;color:#bdbdbd;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-icon svg{width:17px;height:17px}.ds-icon:hover:not(:disabled){color:var(--foreground,#ededed);background:var(--surface-hover,#303030)}.ds-icon:focus-visible{outline:2px solid var(--focus,#c7b9f7);outline-offset:3px;}.ds-icon:disabled{opacity:.42;cursor:not-allowed}@media(max-width:760px){.ds-icon{width:36px;height:36px}}@media(prefers-reduced-motion:reduce){.ds-icon{transition:none}}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Labeled key-name field with inset fill.",
+      "html": "<label class=\"ds-field\">Key name<input class=\"ds-input\" placeholder=\"e.g. Production server\"></label>",
+      "css": ".ds-field{display:block;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:13px;font-weight:500;color:var(--foreground,#ededed)}.ds-input{display:block;width:100%;height:40px;margin-top:8px;border:1px solid var(--control-border,#535353);border-radius:7px;background:#1e1e1e;color:var(--foreground,#ededed);padding:8px 11px;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;font-size:14px;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-input::placeholder{color:var(--muted-foreground,#aaa)}.ds-input:focus-visible{outline:2px solid var(--focus,#c7b9f7);outline-offset:3px;outline-offset:2px}@media(prefers-reduced-motion:reduce){.ds-input{transition:none}}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Current route shown by a filled neutral row.",
+      "html": "<nav class=\"ds-navigation\" aria-label=\"Preview navigation\"><a class=\"ds-nav\" href=\"#api-keys\" aria-current=\"page\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><circle cx=\"16\" cy=\"8\" r=\"5\"/><path d=\"m12.5 11.5-9 9H1v-3l2-2h3v-3h3\"/></svg>API Keys</a><a class=\"ds-nav\" href=\"#usage\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M3 3v18h18M7 14l4-4 4 3 6-8\"/></svg>Usage</a></nav>",
+      "css": ".ds-navigation{display:grid;gap:4px;background:var(--sidebar,#131313);padding:12px}.ds-nav{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:flex;align-items:center;gap:11px;min-height:39px;border-radius:var(--radius,8px);padding:0 11px;font-size:13px;color:#c2c2c2;text-decoration:none;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-nav svg{width:17px;height:17px}.ds-nav:hover{background:#242424;color:var(--foreground,#ededed)}.ds-nav[aria-current=page]{background:var(--surface-hover,#303030);color:var(--foreground,#ededed)}.ds-nav:focus-visible{outline:2px solid var(--focus,#c7b9f7);outline-offset:3px;}@media(prefers-reduced-motion:reduce){.ds-nav{transition:none}}"
+    },
+    {
+      "name": "Demo Tag",
+      "kind": "chip",
+      "refersTo": "demo-tag",
+      "description": "Static sample-data indicator, not an interactive filter.",
+      "html": "<span class=\"ds-demo-tag\">Demo</span>",
+      "css": ".ds-demo-tag{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;display:inline-block;font-size:10px;line-height:1.5;color:#c1b0f0;background:#302b3d;border-radius:4px;padding:2px 6px}"
+    },
+    {
+      "name": "Demo Notice",
+      "kind": "card",
+      "refersTo": "notice-card",
+      "description": "Bordered information panel used at the foot of navigation.",
+      "html": "<div class=\"ds-notice\"><div class=\"ds-notice-title\"><span class=\"ds-dot\"></span>Demo workspace</div><p>Sample data. Keys created here won\u2019t access the Mathew AI API.</p><button class=\"ds-reset\">Reset demo keys</button></div>",
+      "css": ".ds-notice{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:#252525;border:1px solid var(--border,#383838);border-radius:var(--radius,8px);padding:13px 12px;color:var(--foreground,#ededed)}.ds-notice-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500}.ds-dot{width:6px;height:6px;border-radius:50%;background:var(--accent,#ad9beb)}.ds-notice p{font-size:12px;color:var(--muted-foreground,#aaa);margin:6px 0 0;line-height:1.65}.ds-reset{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;background:none;border:0;padding:0;font-size:12px;margin-top:11px;color:inherit;cursor:pointer;transition:background-color 160ms ease-out,color 160ms ease-out,border-color 160ms ease-out;}.ds-reset:hover{color:#fff;text-decoration:underline;text-underline-offset:3px}.ds-reset:focus-visible{outline:2px solid var(--focus,#c7b9f7);outline-offset:3px;}@media(prefers-reduced-motion:reduce){.ds-reset{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The restrained developer workspace",
+    "overview": "A restrained developer workspace follows the owner-selected OpenAI Platform reference: a near-black sidebar, charcoal content, compact sans-serif text, fine dividers, and white primary actions. Mathew AI keeps its own name and uses muted violet for data and small demo indicators.\n\nThis record describes the implemented API Keys and Usage demo. It records the built interface; live API operations and authentication remain outside the current implementation. The visual source of truth is `src/styles/index.css`, with shared behavior in `src/components/`.",
+    "keyCharacteristics": [
+      "Compact, left-aligned working surfaces with generous unused workspace.",
+      "Flat tonal separation and fine borders instead of shadows.",
+      "Small outline icons, quiet labels, and clear primary actions.",
+      "Visible keyboard focus, responsive navigation, and explicit demo labeling."
+    ],
+    "rules": [],
+    "dos": [
+      "Do reuse the shared shell, compact controls, and existing CSS tokens.",
+      "Do keep primary actions white and reserve violet for data and small indicators.",
+      "Do pair status colors with text, preserve visible focus, and label icon controls.",
+      "Do preserve table readability with scrolling and the implemented overflow cue.",
+      "Do label sample data and sample credentials as demo content."
+    ],
+    "donts": [
+      "Don't add decorative gradients, glass effects, or shadows to these flat workspaces.",
+      "Don't turn each metric or table section into a floating card.",
+      "Don't use oversized marketing typography inside the dashboard.",
+      "Don't hide table actions by clipping the scroll container or shrink columns to unreadable widths.",
+      "Don't imply the demo credentials or account are connected to a live service."
+    ]
+  }
+}

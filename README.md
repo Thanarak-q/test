@@ -12,11 +12,11 @@ docs/   STRUCTURE.md (layout + pinned versions) · DECISIONS.md (why, and what f
 
 ```bash
 bun install                      # root tooling + web deps
-uv sync --project api --all-groups
+uv sync --directory api --all-groups
 cp api/.env.example api/.env
 cp web/.env.example web/.env
-docker compose up -d mysql       # MySQL on :3310
-uv run --project api alembic upgrade head
+docker compose up -d             # MySQL on :3310, Redis on :6389
+uv run --directory api alembic upgrade head
 ```
 
 ## Run
@@ -35,8 +35,8 @@ bun run typecheck && bun run lint && bun run test && bun run format:check
 ## Migrations
 
 ```bash
-uv run --project api alembic revision --autogenerate -m "add money_transactions"
-uv run --project api alembic upgrade head
+uv run --directory api alembic revision --autogenerate -m "add money_transactions"
+uv run --directory api alembic upgrade head
 ```
 
 New tables must be imported into `api/app/models.py` or autogenerate will not see them.

@@ -10,6 +10,7 @@ api/
     ├── main.py               app assembly · CORS · error handlers · mounts /v1
     ├── config.py             pydantic-settings; missing env var fails at boot
     ├── db.py                 async engine · SessionLocal · Base · get_session
+    ├── redis.py               shared async client + get_redis dependency
     ├── envelope.py           Envelope[T] · EnvelopeRoute · AppError · handlers
     ├── models.py             every ORM table imported here for autogenerate
     ├── routers/{f}.py        HTTP only — no business logic
@@ -51,6 +52,7 @@ web/
 | eslint                 | 10.10.0 · typescript-eslint 8.69.0 · prettier 3.9.6                       |
 | vitest                 | 5.0.0 · jsdom 30.0.1                                                      |
 | MySQL                  | 8.4 (compose, host port 3310)                                             |
+| Redis                  | 8-alpine (compose, host port 6389) · redis-py 8.1.0                       |
 
 ## Adding a feature
 

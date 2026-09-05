@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+# Shell hooks fail to execute if git hands them CRLF.
+.husky/** text eol=lf
+*.sh text eol=lf
+
+bun.lock -diff linguist-generated
+api/uv.lock -diff linguist-generated
+web/src/routeTree.gen.ts -diff linguist-generated

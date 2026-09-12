@@ -25,3 +25,4 @@ backup/
 Thumbs.db
 .idea/
 .vscode/
+.github/copilot-instructions.md

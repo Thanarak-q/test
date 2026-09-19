@@ -6,10 +6,7 @@ from collections.abc import Iterable
 from fastapi import HTTPException, Request
 
 UNTRUSTED_REQUEST_MESSAGE = "Request must arrive through a trusted proxy."
-HTTPS_REQUIRED_MESSAGE = (
-    "HTTPS is required. Update your client to use https:// and revoke this "
-    "key, as it was transmitted unencrypted."
-)
+HTTPS_REQUIRED_MESSAGE = "HTTPS is required. Update your client to use https://"
 
 
 def build_trusted_proxy_set(trusted_proxy_ips: Iterable[str]) -> frozenset[str]:

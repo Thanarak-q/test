@@ -9,7 +9,6 @@ from redis.asyncio import Redis
 from app.config import settings
 from app.envelope import EnvelopeRoute, register_error_handlers
 from app.routers import health
-from app.services import llm_provider
 from app.services.proxy_trust import build_trusted_proxy_set
 
 
@@ -22,7 +21,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
-        await llm_provider.aclose()
         await app.state.redis.aclose()
 
 

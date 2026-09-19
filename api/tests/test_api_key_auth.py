@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi import HTTPException
 
-from app.services.api_key_auth import (
+from app.services.validate_api_key import (
     DATABASE_TIMEOUT_SECONDS,
     NEGATIVE_CACHE_TTL_SECONDS,
     POSITIVE_CACHE_TTL_SECONDS,

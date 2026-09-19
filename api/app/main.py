@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.envelope import EnvelopeRoute, register_error_handlers
-from app.routers import health, llm
+
+# from app.routers import health, llm
+from app.routers import health
 from app.services import llm_provider
 
 
@@ -30,4 +32,4 @@ app.add_middleware(
 register_error_handlers(app)
 
 app.include_router(health.router, prefix="/v1")
-app.include_router(llm.router, prefix="/v1")
+# app.include_router(llm.router, prefix="/v1")

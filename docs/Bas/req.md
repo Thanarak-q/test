@@ -133,52 +133,52 @@ Implement the functions in this order. Each phase supplies a dependency for the 
 
 `validate_api_key(token, source_ip) -> {user_id, key_id} | 401`
 
-- parse: mthw01_{key_id}_{secret}
+- [] parse: mthw01_{key_id}_{secret}
   - wrong prefix or shape -> 401
   - key_id ต้องเป็น ULID ถูกรูป (26 ตัว, Crockford base32)
   - secret ต้องยาว 32 ตัว base62
   - ผิดรูป -> 401 ทันที ไม่แตะ redis ไม่แตะ db
-- check negative cache: auth:neg:{key_id} -> 401
-- hash = sha256(secret)
+- [] check negative cache: auth:neg:{key_id} -> 401
+- [] hash = sha256(secret)
   - SHA-256 ไม่ใช่ bcrypt/argon2
     - secret มี entropy 190 bits จาก CSPRNG ไม่ใช่รหัสผ่าน
     - bcrypt ออกแบบให้ช้าเพื่อชดเชย entropy ต่ำ
     - ที่นี่ทำทุก request จึงรับต้นทุนนั้นไม่ได้
-- raw token/secret ไม่ออกจาก scope ของฟังก์ชันนี้
+- [] raw token/secret ไม่ออกจาก scope ของฟังก์ชันนี้
   - ห้ามเก็บใน struct/object ที่ส่งต่อไป layer อื่น
   - ห้ามวางในตัวแปรที่อาจถูก serialize ลง error trace
-- check auth cache: auth:{key_id}
+- [] check auth cache: auth:{key_id}
   - cached value = {user_id, key_hash, status}
   - hit -> constant-time compare hash, check status
   - miss -> query db by key_id (db timeout 2s)
-- db unavailable -> 503 ไม่ใช่ 401
+- [] db unavailable -> 503 ไม่ใช่ 401
   - 401 จะทำให้ผู้ใช้เข้าใจผิดว่า key ตัวเองเสีย
-- db miss -> set auth:neg:{key_id} ttl 30 -> 401
+- [] db miss -> set auth:neg:{key_id} ttl 30 -> 401
   - cache เฉพาะ key_id ไม่มีจริง ไม่ cache กรณี hash ผิด
   - ttl 30 ไม่สั้นกว่า auth cache มากเกินไป (ลด timing gap)
   - หมายเหตุ: กันได้เฉพาะการยิงซ้ำ key เดิม
     ถ้ายิงด้วย key_id สุ่มไม่ซ้ำ ตัวที่กันคือ preauth_rate_limit
-- constant-time compare hash
-- status must be "active" (single source of truth, not revoked_at)
-- user_id from key record only, never from request
+- [] constant-time compare hash
+- [] status must be "active" (single source of truth, not revoked_at)
+- [] user_id from key record only, never from request
   - ห้ามมี default user_id ทุกกรณี
   - cached value ไม่มี user_id -> ถือเป็น miss
-- fill cache auth:{key_id} ttl 60
+- [] fill cache auth:{key_id} ttl 60
   - = worst-case exposure window หลัง revoke ถ้า invalidate พลาด
-- on success -> update last_used_at (throttled 5 min)
+- [] on success -> update last_used_at (throttled 5 min)
   - คืน token กลับเข้า rl:ip:{ip}
   - IP bucket จึงนับเฉพาะ request ที่ล้มเหลว
   - ผู้ใช้ที่ตั้งค่า key ผิดชั่วคราวไม่ถูกกันหลังแก้ถูกแล้ว
-- on failure -> audit: auth.failed (key_id, source_ip, reason) async
+- [] on failure -> audit: auth.failed (key_id, source_ip, reason) async
   - reason เก็บฝั่ง server เท่านั้น ไม่ส่งกลับให้ผู้เรียก
   - aggregate record ที่ซ้ำกัน (key_id + ip เดิม)
   - alert เมื่อ failure rate สูงผิดปกติจาก ip เดียว
-- log ใช้ key_id เท่านั้น ห้าม log token/secret ทุกกรณี
-- redis down -> 503, never fail open
+- [] log ใช้ key_id เท่านั้น ห้าม log token/secret ทุกกรณี
+- [] redis down -> 503, never fail open
   - Redis เป็น hard dependency ของ feature นี้
   - การถอยไป query db ทุก request จะทำให้ db ที่ใช้ร่วมกับ
     แอปหลักรับภาระเกิน กลายเป็นขยายผลกระทบไปสู่ระบบหลัก
-- all failures return identical 401
+- [] all failures return identical 401
   - เหมือนกันทั้ง status, body, header
   - ห้ามมี WWW-Authenticate ที่บอกเหตุผลต่างกัน
   - ห้ามมี error code ย่อยใน body

@@ -1,13 +1,13 @@
 # Validate API Key Plan
 
-สถานะ: แผนออกแบบ standalone สำหรับ `validate_api_key` ต่อจาก `require_https` และ `enforce_pre_auth_rate_limit`
+สถานะ: แผนออกแบบ standalone สำหรับ `validate_api_key` ต่อจาก `require_https` และ `pre_auth_rate_limit`
 
 ## ขอบเขต
 
 เอกสารนี้กำหนดเฉพาะการตรวจ API key ตามส่วน `Validate API Key` ใน `req.md` เท่านั้น
 
 - ออกแบบและทดสอบ `validate_api_key(token, source_ip)`
-- ใช้ผลจาก `require_https` และ `enforce_pre_auth_rate_limit` เป็น boundary ก่อนหน้าเท่านั้น
+- ใช้ผลจาก `require_https` และ `pre_auth_rate_limit` เป็น boundary ก่อนหน้าเท่านั้น
 - ไม่เรียกใช้ ไม่แก้ไข และไม่ผูกกับส่วนประกอบใดนอกขอบเขตการตรวจ API key นี้
 - รายละเอียดในแผนเป็นข้อเสนอสำหรับ implementation ใหม่ทั้งหมด
 
@@ -21,11 +21,11 @@ validate_api_key(token, source_ip) -> {user_id, key_id} | 401 | 503
 
 ```text
 require_https
-  -> enforce_pre_auth_rate_limit
+  -> pre_auth_rate_limit
   -> validate_api_key
 ```
 
-`source_ip` ต้องเป็นค่าที่ผ่าน trusted-proxy handling จาก `enforce_pre_auth_rate_limit` แล้ว โดย function นี้ไม่อ่าน header และไม่คำนวณ IP เอง
+`source_ip` ต้องเป็นค่าที่ผ่าน trusted-proxy handling จาก `pre_auth_rate_limit` แล้ว โดย function นี้ไม่อ่าน header และไม่คำนวณ IP เอง
 
 ## ข้อกำหนดที่ต้องรักษา
 
@@ -153,7 +153,7 @@ credential failure ทุกชนิดต้องเหมือนกัน�
 ตรวจ integration เพียงสองจุด:
 
 - `require_https` ต้องมาก่อนการรับรองตัวตน
-- `enforce_pre_auth_rate_limit` ต้องผ่านก่อนเรียก `validate_api_key`
+- `pre_auth_rate_limit` ต้องผ่านก่อนเรียก `validate_api_key`
 
 ไม่เพิ่มการเรียกหรือการแก้ไข function, service, API หรือ flow อื่นใด
 
@@ -174,7 +174,7 @@ credential failure ทุกชนิดต้องเหมือนกัน�
 - returned `user_id` ต้องตรงกับ record และไม่มี default identity
 - raw token/secret ไม่ปรากฏใน exception, log, audit หรือ return value
 - `last_used_at` ไม่ถูก update ถี่เกิน 5 นาที
-- boundary order: `require_https` -> `enforce_pre_auth_rate_limit` -> `validate_api_key`
+- boundary order: `require_https` -> `pre_auth_rate_limit` -> `validate_api_key`
 
 ## Implementation Checklist
 
@@ -210,7 +210,7 @@ credential failure ทุกชนิดต้องเหมือนกัน�
 
 ### Boundary และ tests
 
-- [ ] ยืนยันลำดับ `require_https` -> `enforce_pre_auth_rate_limit` -> `validate_api_key`
+- [ ] ยืนยันลำดับ `require_https` -> `pre_auth_rate_limit` -> `validate_api_key`
 - [ ] ทดสอบทุก malformed token โดยยืนยันว่าไม่มี I/O
 - [ ] ทดสอบ cache hit, cache miss และ cache field ไม่ครบ
 - [ ] ทดสอบ hash ผิด, status ไม่ active และ database miss ให้ response เหมือนกัน
@@ -231,7 +231,7 @@ credential failure ทุกชนิดต้องเหมือนกัน�
 ## Definition of done
 
 - function นี้ทำงานได้โดยพึ่งพาเฉพาะ input, cache port, database port และ audit port ที่ประกาศในแผน
-- `require_https` และ `enforce_pre_auth_rate_limit` เป็นเพียง boundary ที่เชื่อมก่อนหน้า
+- `require_https` และ `pre_auth_rate_limit` เป็นเพียง boundary ที่เชื่อมก่อนหน้า
 - ไม่มีการอ้างอิงหรือเรียกใช้ส่วนอื่นของโปรเจกต์เดิม
 - malformed token ไม่แตะ Redis/DB
 - invalid credential ทุกแบบมี 401 contract เดียวกัน

@@ -1,7 +1,7 @@
-import json
-
+import pytest
 from fastapi import Request
 
+from app.envelope import AppError
 from app.services.require_https import require_https
 
 
@@ -17,16 +17,11 @@ def build_request(protocol: str) -> Request:
 
 
 def test_non_https_request_is_rejected():
-    response = require_https(build_request("http"))
+    with pytest.raises(AppError) as exc_info:
+        require_https(build_request("http"))
 
-    assert response is not None
-    assert response.status_code == 400
-    assert json.loads(response.body) == {
-        "error": {
-            "type": "invalid_request",
-            "message": "HTTPS is required. Update your client to use https://",
-        }
-    }
+    assert exc_info.value.code == "http_https_required"
+    assert exc_info.value.status_code == 400
 
 
 def test_https_forwarded_proto_is_allowed():

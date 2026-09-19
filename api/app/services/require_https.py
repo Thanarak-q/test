@@ -1,16 +1,13 @@
 from fastapi import Request
-from fastapi.responses import JSONResponse
 
-HTTPS_REQUIRED_BODY = {
-    "error": {
-        "type": "invalid_request",
-        "message": "HTTPS is required. Update your client to use https://",
-    }
-}
+from app.envelope import AppError
 
 
-def require_https(request: Request) -> JSONResponse | None:
+def require_https(request: Request) -> None:
     protocol = request.headers.get("X-Forwarded-Proto")
     if protocol == "https":
-        return None
-    return JSONResponse(status_code=400, content=HTTPS_REQUIRED_BODY)
+        return
+    raise AppError(
+        "http_https_required",
+        "HTTPS is required. Update your client to use https://",
+    )

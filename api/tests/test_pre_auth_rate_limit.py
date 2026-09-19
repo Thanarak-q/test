@@ -1,7 +1,7 @@
 import pytest
-from fastapi import HTTPException
 from starlette.requests import Request
 
+from app.envelope import AppError
 from app.services.pre_auth_rate_limit import get_trusted_proxy_ip
 
 
@@ -40,5 +40,7 @@ def test_uses_rightmost_x_forwarded_for_value():
 def test_rejects_request_from_untrusted_peer():
     request = build_request({"X-Real-IP": "203.0.113.42"})
 
-    with pytest.raises(HTTPException, match="trusted proxy"):
+    with pytest.raises(AppError) as exc_info:
         get_trusted_proxy_ip(request, ["10.0.0.11"])
+
+    assert exc_info.value.code == "proxy_required"

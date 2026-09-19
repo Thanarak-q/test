@@ -27,6 +27,7 @@ _SHA256_RE = re.compile(r"[0-9a-fA-F]{64}\Z")
 _POSITIVE_CACHE_FIELDS = {"key_id", "user_id", "key_hash", "status", "last_used_at"}
 
 
+# region Models
 class AuthInfrastructureError(RuntimeError):
     """An auth dependency failed and must be exposed as HTTP 503."""
 
@@ -83,6 +84,9 @@ class _ValidatedRecord:
         }
 
 
+# endregion
+
+
 def negative_cache_key(key_id: str) -> str:
     return f"auth:neg:{key_id}"
 
@@ -91,11 +95,12 @@ def positive_cache_key(key_id: str) -> str:
     return f"auth:{key_id}"
 
 
+# region Validate API Key
 async def validate_api_key(
     token: str,
     source_ip: str,
     *,
-    cache: AuthCache,
+    cache: AuthCache,  # positive, negative
     database: AuthDatabase,
     audit: AuthFailureAudit,
     now: Callable[[], datetime] | None = None,
@@ -107,27 +112,28 @@ async def validate_api_key(
     """
     parsed = _parse_token(token)
     if parsed is None:
-        raise _invalid_credential()
+        raise _invalid_credential()  # 401
 
     key_id, secret = parsed
     try:
-        if await cache.get_negative(key_id):
+        if await cache.get_negative(key_id):  # Have in negative cache?
             await _audit_failure(audit, key_id, source_ip, "key_not_found")
             raise _invalid_credential()
-
+        # base62 -> ascii -> 256bit -> Hexadecimal
         key_hash = hashlib.sha256(secret.encode("ascii")).hexdigest()
-        cached = await cache.get_positive(key_id)
+        cached = await cache.get_positive(key_id)  # have in potitive cache
         record = _validate_record(cached, key_id) if cached is not None else None
         from_cache = record is not None
 
+        # ยังไม่เคยมี key_id นี้ใน cache
         if record is None:
-            database_record = await database.get_by_key_id(
+            database_record = await database.get_by_key_id(  # query key_id from db
                 key_id, timeout_seconds=DATABASE_TIMEOUT_SECONDS
             )
-            if database_record is None:
+            if database_record is None:  # not found
                 await cache.set_negative(key_id, NEGATIVE_CACHE_TTL_SECONDS)
                 await _audit_failure(audit, key_id, source_ip, "key_not_found")
-                raise _invalid_credential()
+                raise _invalid_credential()  # 401
 
             record = _validate_record(database_record, key_id)
             if record is None:
@@ -159,9 +165,13 @@ async def validate_api_key(
         raise _auth_unavailable() from exc
 
 
+# endregion
+
+
+# region Parse Token
 def _parse_token(token: str) -> tuple[str, str] | None:
     parts = token.split("_")
-    if len(parts) != 3 or parts[0] != _TOKEN_PREFIX:
+    if len(parts) != 3 or parts[0] != _TOKEN_PREFIX:  # prefix = mthw01
         return None
 
     key_id, secret = parts[1].upper(), parts[2]
@@ -170,6 +180,12 @@ def _parse_token(token: str) -> tuple[str, str] | None:
     return key_id, secret
 
 
+# endregion
+
+# region Validate Record
+
+
+# check if record from cache or db have fully fields
 def _validate_record(
     raw: Mapping[str, object] | None, expected_key_id: str
 ) -> _ValidatedRecord | None:
@@ -204,6 +220,9 @@ def _validate_record(
     )
 
 
+# endregion
+
+
 async def _refresh_last_used(
     record: _ValidatedRecord,
     key_id: str,
@@ -221,6 +240,7 @@ async def _refresh_last_used(
     return replace(record, last_used_at=current_time)
 
 
+# logging failed
 async def _audit_failure(
     audit: AuthFailureAudit, key_id: str, source_ip: str, reason: str
 ) -> None:

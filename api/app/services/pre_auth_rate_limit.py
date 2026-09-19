@@ -118,9 +118,7 @@ async def check_pre_auth_rate_limit(redis: Redis, ip: str) -> RateLimitResult:
             },
         )
 
-    return RateLimitResult(
-        limit=CAPACITY, remaining=int(remaining), reset=int(reset)
-    )
+    return RateLimitResult(limit=CAPACITY, remaining=int(remaining), reset=int(reset))
 
 
 async def refund_pre_auth_token(redis: Redis, ip: str) -> None:

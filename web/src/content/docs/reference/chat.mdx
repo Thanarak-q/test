@@ -1,0 +1,38 @@
+import { chatRequest, chatRequestSchema, chatResponse, chatResponseSchema } from "../samples";
+
+<code>POST {"{base_url}"}/chat/completions</code> — base URL <Value path="baseUrl" code />
+
+Generates the next message in a conversation.
+
+## Request
+
+<CodeBlock label="Request body" code={chatRequestSchema.code} />
+
+`max_tokens` may not exceed <Value path="limits.maxOutputTokens" />, and the whole request
+may not exceed <Value path="limits.maxInputTokens" /> tokens of input. Not supported:
+
+<Value path="unsupportedParams" />.
+
+## Response
+
+<CodeBlock label="Response body" code={chatResponseSchema.code} />
+
+## Example
+
+<CodeTabs sample={chatRequest} />
+
+<CodeBlock label="Response" code={chatResponse.code} unconfirmed={chatResponse.unconfirmed} />
+
+## Errors
+
+| Status | Code                           | When                                                     |
+| ------ | ------------------------------ | -------------------------------------------------------- |
+| 400    | `http_400`                     | Not HTTPS, or the request did not come through the proxy |
+| 401    | `http_401`                     | The key is missing, wrong or not active                  |
+| 413    | `http_413`                     | Input exceeds the per-request token cap                  |
+| 422    | `validation_error`             | The body does not match the schema above                 |
+| 429    | `rate_limit_exceeded_requests` | Request limit reached                                    |
+| 429    | `rate_limit_exceeded_tokens`   | Token limit reached                                      |
+| 503    | `http_503`                     | A dependency is unavailable — retry later                |
+
+Details and what to do: [Errors](/docs/errors).

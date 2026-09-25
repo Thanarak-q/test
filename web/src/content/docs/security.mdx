@@ -1,0 +1,25 @@
+import { envVariable, escaping } from "./samples";
+
+## Store keys as secrets
+
+Keep keys in environment variables or a secret manager — never in source code, a
+repository, a frontend bundle, or a mobile app.
+
+<CodeTabs sample={envVariable} />
+
+## Treat model output as untrusted
+
+A model's reply is shaped by its input, and its input can come from anyone. Treat output
+as data, never as code or markup: escape it before rendering it in a page, and never
+pass it to a shell, SQL, or `eval`.
+
+<CodeTabs sample={escaping} />
+
+## If a key leaks
+
+1. **Revoke it** on the [API Keys](/api-keys) page — immediately, before anything else.
+   Revocation takes effect within <Value path="revokeWindowSeconds" unit="seconds" />.
+2. **Create a new key.**
+3. **Redeploy** with the new key.
+
+Then check the [Usage](/usage) page for activity you do not recognise.

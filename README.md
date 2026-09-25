@@ -37,6 +37,10 @@ API tests that prove fail-closed auth and key ownership run against the compose 
 and Redis (they create and drop a `matthew_test` database). Without the services they
 skip; set `REQUIRE_INFRA=1` (CI) to make a missing service a failure instead.
 
+`gates` builds the web with `build:check`. A release uses `bun run --cwd web build`,
+which also refuses to build while the docs still contain placeholder values
+(`web/src/content/docs/values.ts`).
+
 ## Regenerating the web API client
 
 ```bash

@@ -1,0 +1,24 @@
+Entries are dated by when the change takes effect.
+
+## Unreleased
+
+### Added
+
+- API keys: create, list, revoke and delete from the API Keys page. Keys are shown once.
+- Usage page with daily requests and tokens, split by API and web, per key.
+- Request and token rate limits, each with its own response headers.
+- An `X-Request-Id` header on every response.
+- This documentation.
+
+### Changed
+
+- Error responses name which rate limit was reached.
+
+### Deprecated
+
+- Nothing yet.
+
+### Security
+
+- Improved ownership checks on key management.
+- Plain-HTTP requests are rejected with advice to revoke the key they carried.

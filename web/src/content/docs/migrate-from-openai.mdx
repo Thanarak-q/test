@@ -1,0 +1,23 @@
+import { migrate } from "./samples";
+
+If your code already uses an OpenAI SDK, switching is three changes:
+
+1. **`base_url`** → <Value path="baseUrl" code />
+2. **`api_key`** → a key from the [API Keys](/api-keys) page
+3. **`model`** → a model from the [Models](/docs/models) page
+
+<CodeTabs sample={migrate} />
+
+## Not supported
+
+These request parameters are not supported and are rejected:
+
+<Value path="unsupportedParams" />.
+
+## What is different
+
+- **Quota is shared with the web app.** API and web usage draw from one token quota; see
+  [Models](/docs/models).
+- **Two layers of rate limits** — requests and tokens — each with its own headers. See
+  [Rate limits](/docs/rate-limits).
+- **Errors** use this API's error format and codes, listed on [Errors](/docs/errors).

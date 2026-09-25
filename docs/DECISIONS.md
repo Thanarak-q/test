@@ -215,6 +215,31 @@ transaction each, so it never holds locks the request path waits on; `created_at
 indexes (migration `20260925_retention`) keep each batch off a table scan. Audit and
 auth-failure logs keep 90 days, usage 60.
 
+## 2026-09-25 — public docs (`/docs`)
+
+**Every value comes from `web/src/content/docs/values.ts`.** Pages name a value by path
+(`<Value path="limits.tokens.capacity" />`) and code samples are built from it in
+`samples.ts`. `values-only.test.ts` reads each `.mdx` from disk and fails if any value
+from `values.ts` appears literally. Placeholders are deliberately fake (`TBD`, `0` in a
+limit or context window, a `.invalid` URL) and render as a "To be confirmed" badge.
+
+**The release build refuses placeholders; the gates build does not.** `bun run --cwd web
+build` runs `placeholders.test.ts` in production mode first, which fails while any
+placeholder is left. The values are TBD by design until launch, so `bun run gates` uses
+`build:check` (compile and typecheck only) instead. Switch release pipelines to `build`.
+
+**Docs render inside the dashboard layout,** with their own grouped sidebar, and call no
+API, so they read the same signed out. One splat route (`/docs/$`) looks pages up in
+`pages/docs/nav.ts`; each page's MDX chunk loads lazily.
+
+**Preview badges on every endpoint page, not only the three the brief named.** Chat,
+embeddings and models are all served by the chat pipeline, none of which exists yet;
+"document only what exists" applies to all three references.
+
+**Errors document the envelope the API returns today** (`error.code`, e.g. `http_401`,
+`rate_limit_exceeded_tokens`). If the chat pipeline returns OpenAI-shaped errors for SDK
+compatibility, the Errors page and chat reference change with it.
+
 ## Out of scope until asked
 
 - Multi-user, workspaces, invitations. `user_id` columns exist so adding it later is a

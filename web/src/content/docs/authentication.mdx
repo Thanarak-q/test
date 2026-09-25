@@ -1,0 +1,51 @@
+import { authHeader, envVariable } from "./samples";
+
+Every request carries an API key in the `Authorization` header:
+
+<CodeBlock label="Header" code={authHeader.code} />
+
+A key has three parts: the prefix <Value path="keyPrefix" code />, the key id, and the
+secret. The first two together (<code>{"<prefix>\_<key id>"}</code>) are what the API Keys page shows
+so you can tell keys apart; the secret is never shown again.
+
+## The key is shown once
+
+The full key is displayed a single time, right after you create it. We store only a hash
+of the secret, so nobody — including us — can show it to you again.
+
+**Lost it?** Create a new key, update your application, then revoke the old one.
+
+## Limits
+
+- At most <Value path="maxKeysPerUser" /> active keys per account. Revoke one to create
+  another.
+- Limits are per account, not per key: more keys do not give you more requests or
+  tokens.
+
+## HTTPS only
+
+Requests over plain HTTP are rejected with `400`. By the time the API sees such a
+request, the key has already crossed the network unencrypted — **revoke that key** and
+create a new one, then switch the client to `https://`.
+
+## Keep keys out of code
+
+Never commit a key, and never put one in frontend code, a mobile app, or anything else
+you ship to users: anyone who has the file has the key. Read it from the environment on
+your server:
+
+<CodeTabs sample={envVariable} />
+
+## Revoking
+
+Revoke a key from the API Keys page. Revocation takes effect within
+
+<Value path="revokeWindowSeconds" unit="seconds" />; requests authenticated before then may still
+complete.
+
+## When authentication fails
+
+Every authentication failure — missing header, malformed key, unknown key, wrong secret,
+revoked key — returns the same `401`. The response deliberately does not say which, so it
+cannot help someone guessing keys. Check that the full key was copied and that it is
+still active on the API Keys page.

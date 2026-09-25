@@ -1,0 +1,55 @@
+import { docsValues } from "./values";
+
+<div className="table-scroll" role="region" tabIndex={0} aria-label="Models">
+  <table className="data-table docs-table">
+    <thead>
+      <tr>
+        <th scope="col">Model</th>
+        <th scope="col">Purpose</th>
+        <th scope="col">Context window (tokens)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {docsValues.models.map((model, index) => (
+        <tr key={model.name}>
+          <td>
+            <Value path={`models[${index}].name`} code />
+          </td>
+          <td>
+            <Value path={`models[${index}].purpose`} />
+          </td>
+          <td>
+            <Value path={`models[${index}].contextWindow`} />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+The context window is the most a model can handle in one request: your prompt and its
+reply together.
+
+## Tokens
+
+Models read and write text in **tokens** — pieces of words, not characters. Usage,
+quota and the token rate limit are all counted in tokens.
+
+Thai text uses noticeably more tokens per character than English, so the same message
+costs more in Thai. Budget with a few real prompts rather than by character count.
+
+## Quota is shared with the web app
+
+Your token quota covers both the API and the Mathew AI web app. Heavy API use leaves
+less for the web app, and the other way round.
+
+Remaining quota is shown only on the [Usage](/usage) page, split by API and web. The API
+does not return it: a key may be used by someone other than the account owner.
+
+## Per-request caps
+
+- Input: at most <Value path="limits.maxInputTokens" /> tokens per request.
+- Output: at most <Value path="limits.maxOutputTokens" /> tokens per reply (`max_tokens`).
+
+A request over the input cap is rejected with `413` before it is counted against your
+rate limit.

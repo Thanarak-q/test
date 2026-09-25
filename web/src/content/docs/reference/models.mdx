@@ -1,0 +1,22 @@
+import { modelsRequest, modelsResponse } from "../samples";
+
+<code>GET {"{base_url}"}/models</code> — base URL <Value path="baseUrl" code />
+
+Lists the models your key can use. The same list, with context windows, is on
+[Models](/docs/models).
+
+## Request
+
+No body. Authenticate as usual.
+
+## Response
+
+<CodeBlock label="Response" code={modelsResponse.code} unconfirmed={modelsResponse.unconfirmed} />
+
+## Example
+
+<CodeTabs sample={modelsRequest} />
+
+## Errors
+
+`401`, `429` and `503`, as described on [Errors](/docs/errors).

@@ -1,0 +1,32 @@
+## I lost my key.
+
+Keys are shown once and cannot be recovered. Create a new key on the
+[API Keys](/api-keys) page, update your application, then revoke the old one.
+
+## I got 429 after only a few calls.
+
+Check the error code. `rate_limit_exceeded_tokens` means a few large requests used up the
+token limit even though you made few requests. Send shorter prompts or a lower
+`max_tokens`, and wait `Retry-After` seconds. See [Rate limits](/docs/rate-limits).
+
+## Do more keys give me more quota?
+
+No. Quota and rate limits belong to the account, and every key shares them. Up to
+
+<Value path="maxKeysPerUser" /> keys exist so you can separate applications and revoke one without
+touching the others.
+
+## I get 401 with a correct key.
+
+Every authentication failure returns the same 401, so check each cause in turn:
+
+- The whole key was copied, including the <Value path="keyPrefix" code /> prefix.
+- The header is `Authorization: Bearer <key>`.
+- The key is still active on the [API Keys](/api-keys) page.
+- You are calling over `https://`.
+
+## My quota runs out faster than expected.
+
+Your quota is shared with the Mathew AI web app, and Thai text uses more tokens per
+character than English. The [Usage](/usage) page splits usage by API and web so you can
+see where it went.

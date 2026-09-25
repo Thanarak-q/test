@@ -1,5 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { ChartNoAxesCombined, KeyRound, Menu, X } from "lucide-react";
+import { BookOpen, ChartNoAxesCombined, KeyRound, Menu, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 const Navigation = ({ onNavigate }: { onNavigate?: () => void }) => (
@@ -21,6 +21,10 @@ const Navigation = ({ onNavigate }: { onNavigate?: () => void }) => (
     >
       <ChartNoAxesCombined />
       Usage
+    </Link>
+    <Link to="/docs" className="nav-item" onClick={onNavigate}>
+      <BookOpen />
+      Docs
     </Link>
   </nav>
 );

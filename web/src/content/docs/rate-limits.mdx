@@ -1,0 +1,51 @@
+import { backoff, errorResponse } from "./samples";
+
+Two limits apply to every account, and a request must pass both.
+
+| Limit    | Counts                           | Headers                                                                                |
+| -------- | -------------------------------- | -------------------------------------------------------------------------------------- |
+| Requests | each request, whatever its size  | `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`                            |
+| Tokens   | estimated tokens in each request | `X-RateLimit-Tokens-Limit`, `X-RateLimit-Tokens-Remaining`, `X-RateLimit-Tokens-Reset` |
+
+- Requests: up to <Value path="limits.requests.capacity" /> at once, refilling at
+  <Value path="limits.requests.refillPerSecond" /> per second.
+- Tokens: up to <Value path="limits.tokens.capacity" />, refilling at
+  <Value path="limits.tokens.refillPerSecond" /> per second.
+
+`-Reset` is the number of seconds until that bucket is full again.
+
+## Why two
+
+A count of requests alone would let one huge prompt cost as much as a thousand small
+ones. A token limit alone would let thousands of tiny requests through. Each catches what
+the other misses.
+
+They are independent: five very long prompts can use up the token limit while the
+request limit still has plenty of room. The headers tell you which one you are close to.
+
+## When you get 429
+
+Read the error code to see which limit you hit, and wait for `Retry-After` seconds:
+
+- `rate_limit_exceeded_requests` — too many requests. Slow down.
+- `rate_limit_exceeded_tokens` — too many tokens. Slow down, or send less: shorter
+  prompts, a lower `max_tokens`.
+
+<CodeBlock label="429 response" code={errorResponse.code} />
+
+## Backing off
+
+Retry `429` and `503` after `Retry-After`, with a little random jitter so many clients do
+not retry in lockstep. Do not retry `401` or `400`: they will not fix themselves.
+
+<CodeTabs sample={backoff} />
+
+## Limits are per account
+
+Every key on an account shares the same limits. Creating more keys does not raise them.
+
+There is also a per-IP limit on requests that fail authentication (up to
+
+<Value path="limits.preAuth.capacity" />, refilling at
+<Value path="limits.preAuth.refillPerSecond" /> per second). Successful requests do not count
+against it, so a client that briefly had a wrong key is not locked out once it is fixed.

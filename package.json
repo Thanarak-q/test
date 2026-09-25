@@ -9,7 +9,7 @@
     "prepare": "husky",
     "web": "bun run --cwd web dev",
     "api": "uv run --directory api uvicorn app.main:app --reload --port 8000",
-    "gates": "bun run typecheck && bun run lint && bun run test && bun run format:check && bun run --cwd web build",
+    "gates": "bun run typecheck && bun run lint && bun run test && bun run format:check && bun run --cwd web build:check",
     "typecheck": "bun run --cwd web typecheck",
     "lint": "bun run --cwd web lint && uv run --directory api ruff check .",
     "format": "prettier --write .",

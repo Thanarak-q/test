@@ -1,0 +1,24 @@
+## Where your prompts go
+
+Prompts and responses are sent to <Value path="providerName" /> to generate replies. Their
+data handling is described in <Value path="providerPolicyUrl" />.
+
+No user identifier — not your account id, not your key — is sent to the provider with
+the request.
+
+## What we store
+
+Only metadata: which key made the request, when, which model, how many tokens, and how
+long it took. **We never store prompt or response content.**
+
+| Kept              | For                                              |
+| ----------------- | ------------------------------------------------ |
+| Usage records     | <Value path="retentionDays.usage" unit="days" /> |
+| Key audit records | <Value path="retentionDays.audit" unit="days" /> |
+
+After that they are deleted.
+
+## If you build for other people
+
+If your application sends other people's input to this API, you are responsible for
+telling them where it goes — including that it reaches <Value path="providerName" />.

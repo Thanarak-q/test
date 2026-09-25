@@ -22,11 +22,12 @@ api/
 tests/                        pytest, asyncio_mode=auto · tests/repos/ = real MySQL + Redis
 
 web/
-├── vite.config.ts            router plugin · react · tailwind · react-compiler
+├── vite.config.ts            router plugin · mdx · react · tailwind · react-compiler
 ├── orval.config.ts           OpenAPI → src/api/generated (API must be running)
 └── src/
     ├── routes/               file-based, thin; TanStack Router generates routeTree.gen.ts
     ├── pages/{page}/         the feature: index.tsx · hooks/ · components/
+    ├── content/docs/         public docs: values.ts (every value) · samples.ts · *.mdx
     ├── api/generated/        orval output — hooks, types, query keys; never hand-edited
     ├── api/mutator.ts        orval's axios adapter: unwraps the envelope, throws ApiError(code)
     ├── utils/AxiosUtil.ts    shared axios instance (bare origin; paths carry /v1)

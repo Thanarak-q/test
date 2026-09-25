@@ -1,0 +1,28 @@
+import { errorResponse } from "./samples";
+
+Errors come back with an HTTP status and a body carrying a stable `code` and a
+human-readable `message`. Branch on `code`, not on `message`: messages may change.
+
+<CodeBlock label="Error response" code={errorResponse.code} />
+
+| Status | Code                               | Meaning                                       | What to do                                                              |
+| ------ | ---------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
+| 400    | `http_400`                         | Not sent over HTTPS, or not through the proxy | Use `https://`. If the key went over HTTP, revoke it and make a new one |
+| 401    | `http_401`                         | Authentication failed                         | Check the key is complete and still active on the API Keys page         |
+| 413    | `http_413`                         | Input is over the per-request token cap       | Send a shorter prompt                                                   |
+| 422    | `validation_error`                 | The request body is malformed                 | Fix the field named in `message`                                        |
+| 429    | `rate_limit_exceeded_requests`     | Too many requests                             | Wait `Retry-After` seconds, then retry                                  |
+| 429    | `rate_limit_exceeded_tokens`       | Too many tokens                               | Wait `Retry-After` seconds, or send less                                |
+| 500    | `internal_error`                   | Something went wrong on our side              | Retry once; if it persists, report it with the request id               |
+| 503    | `http_503` / `service_unavailable` | A dependency is temporarily unavailable       | Retry with backoff — see [Rate limits](/docs/rate-limits)               |
+
+## 401 never says why
+
+Every authentication failure returns the same `401` — same body, same headers — whether
+the key is missing, malformed, unknown, wrong or revoked. That is deliberate: a response
+that said "unknown key" versus "wrong secret" would help someone guessing keys.
+
+## Reporting a problem
+
+Every response carries an `X-Request-Id` header. Always include its value when you report
+a problem: it lets us find your exact request.

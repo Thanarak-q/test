@@ -1,0 +1,33 @@
+import { chatRequest, chatResponse, exampleKey } from "./samples";
+
+Make your first request in a few minutes. This page is all you need.
+
+## 1. Create a key
+
+Open [API Keys](/api-keys) and choose **Create new secret key**. Copy the key when it is
+shown — it is displayed once and cannot be retrieved later.
+
+Keys look like <code>{exampleKey}</code>. Store yours in an environment variable rather than
+in code:
+
+<CodeBlock label="Shell" code={`export MATHEW_API_KEY="${exampleKey}"`} />
+
+## 2. Send a request
+
+The API is compatible with the OpenAI SDKs: point them at our base URL
+(<Value path="baseUrl" code />) and use your key.
+
+<CodeTabs sample={chatRequest} />
+
+## 3. What you get back
+
+<CodeBlock label="Response" code={chatResponse.code} unconfirmed={chatResponse.unconfirmed} />
+
+`choices[0].message.content` is the reply. `usage` is what the request cost in tokens —
+see [Models](/docs/models) for what a token is and how quota works.
+
+## Next
+
+- [Authentication](/docs/authentication) — how keys work and how to keep them safe.
+- [Rate limits](/docs/rate-limits) — what a 429 means and how to back off.
+- [Errors](/docs/errors) — every status and error code.

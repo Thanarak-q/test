@@ -1,0 +1,18 @@
+import { embeddingsRequest, embeddingsSchema } from "../samples";
+
+<code>POST {"{base_url}"}/embeddings</code> — base URL <Value path="baseUrl" code />
+
+Turns text into a vector of numbers for search, clustering or similarity.
+
+## Request and response
+
+<CodeBlock label="Schema" code={embeddingsSchema.code} />
+
+## Example
+
+<CodeTabs sample={embeddingsRequest} />
+
+## Errors
+
+Same as [chat completions](/docs/reference/chat): `401`, `413`, `422`, `429` and `503`,
+with the codes listed on [Errors](/docs/errors).

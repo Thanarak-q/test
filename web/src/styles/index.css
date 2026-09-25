@@ -1248,6 +1248,165 @@ main:focus {
   padding-bottom: 0;
 }
 
+/* Docs — public documentation. Same tokens as the dashboard. */
+.docs {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 100dvh;
+}
+.docs-nav {
+  border-right: 1px solid var(--border);
+  padding: 20px 12px 32px;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  position: sticky;
+  top: 0;
+  max-height: 100dvh;
+  overflow-y: auto;
+}
+.docs-nav-group {
+  display: grid;
+  gap: 2px;
+}
+.docs-nav-group .workspace-label {
+  padding: 0 11px 6px;
+}
+.docs-nav .nav-item {
+  min-height: 32px;
+}
+.docs-content {
+  min-width: 0;
+  padding: 28px 28px 64px;
+}
+.docs-article {
+  max-width: 760px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #d6d6d6;
+}
+.docs-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.docs-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  margin: 0;
+}
+.docs-article h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 32px 0 8px;
+}
+.docs-article h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 20px 0 6px;
+}
+.docs-article p,
+.docs-article ul,
+.docs-article ol {
+  margin: 0 0 12px;
+}
+.docs-article ul,
+.docs-article ol {
+  padding-left: 20px;
+}
+.docs-article li + li {
+  margin-top: 4px;
+}
+.docs-article a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.docs-article :not(pre) > code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  background: #2a2a2a;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  overflow-wrap: anywhere;
+}
+.docs-article strong {
+  color: var(--foreground);
+}
+.docs-preview-notice {
+  margin: 0 0 20px;
+}
+.docs-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.5;
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.docs-badge-tbc {
+  color: #ffd79a;
+  background: #3d3322;
+}
+.docs-badge-preview {
+  color: #c1b0f0;
+  background: #302b3d;
+}
+.docs-code {
+  margin: 12px 0 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #1a1a1a;
+  overflow: hidden;
+}
+.docs-code figcaption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.docs-code figcaption .icon-button {
+  margin-left: auto;
+}
+.docs-code pre {
+  margin: 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #e4e4e4;
+}
+.docs-tabs {
+  margin: 12px 0 20px;
+}
+.docs-tabs .metric-tabs {
+  margin-bottom: -4px;
+}
+.docs-tabs .docs-code {
+  margin-top: 8px;
+}
+.docs-table {
+  min-width: 560px;
+  margin: 12px 0 20px;
+}
+.docs-table td {
+  height: auto;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
 @media (max-width: 1100px) {
   .sidebar {
     width: 210px;
@@ -1285,6 +1444,27 @@ main:focus {
   }
 }
 @media (max-width: 760px) {
+  .docs {
+    grid-template-columns: 1fr;
+  }
+  .docs-nav {
+    position: static;
+    max-height: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 12px 16px;
+  }
+  .docs-nav-group {
+    flex: 0 0 auto;
+    align-content: start;
+  }
+  .docs-content {
+    padding: 20px 16px 48px;
+  }
   .sidebar {
     display: none;
   }

@@ -1,31 +1,4 @@
-import { docsValues } from "../values";
-
-<div className="table-scroll" role="region" tabIndex={0} aria-label="โมเดล">
-  <table className="data-table docs-table">
-    <thead>
-      <tr>
-        <th scope="col">โมเดล</th>
-        <th scope="col">ใช้สำหรับ</th>
-        <th scope="col">Context window (โทเคน)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {docsValues.models.map((model, index) => (
-        <tr key={model.name}>
-          <td>
-            <Value path={`models[${index}].name`} code />
-          </td>
-          <td>
-            <Value path={`models[${index}].purpose`} />
-          </td>
-          <td>
-            <Value path={`models[${index}].contextWindow`} />
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+<ModelsTable />
 
 Context window คือปริมาณสูงสุดที่โมเดลรับได้ในหนึ่งคำขอ นับรวมทั้ง prompt และคำตอบ
 

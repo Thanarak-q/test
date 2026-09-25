@@ -30,6 +30,8 @@ MAX_PROVIDER_RESPONSE_BYTES = 10 * 1024 * 1024
 
 # model:enabled is small and read on every request.
 MODEL_CACHE_TTL_SECONDS = 300
+# The public model list (GET /v1/public/models) is cached as one JSON string.
+PUBLIC_MODELS_CACHE_KEY = "model:public"
 
 # A reservation must outlive the slowest possible provider call by at least
 # 2x, or it could expire mid-call and let the user overspend.

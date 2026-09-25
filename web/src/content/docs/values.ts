@@ -28,7 +28,7 @@ export const docsValues = {
     // The llm_models whitelist seeded by the migration.
     { name: "gpt-4o", purpose: "chat", contextWindow: 128_000 },
     { name: "gpt-4.1", purpose: "chat", contextWindow: 1_047_576 },
-    { name: "embed-a", purpose: "embedding", contextWindow: 0 }, // TBD
+    { name: "text-embedding-3-small", purpose: "embedding", contextWindow: 8_191 },
   ],
   unsupportedParams: ["stream", "tools", "functions", "n > 1"],
 } as const;

@@ -86,3 +86,19 @@ async def list_all(session: AsyncSession) -> list[ModelRow]:
     """Every model, enabled or not — for admins."""
     rows = await session.execute(_LIST_ALL)
     return [ModelRow(**row) for row in rows.mappings()]
+
+
+_LIST_ENABLED = text(
+    """
+    SELECT id, name, context_window, max_output_tokens, status
+    FROM llm_models
+    WHERE status = 'enabled'
+    ORDER BY name
+    """
+)
+
+
+async def list_enabled(session: AsyncSession) -> list[ModelRow]:
+    """Only the models callers may use — for the public list."""
+    rows = await session.execute(_LIST_ENABLED)
+    return [ModelRow(**row) for row in rows.mappings()]

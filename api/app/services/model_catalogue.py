@@ -14,7 +14,11 @@ from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.constants.llm import CACHE_INVALIDATION_ATTEMPTS, MODEL_CACHE_TTL_SECONDS
+from app.constants.llm import (
+    CACHE_INVALIDATION_ATTEMPTS,
+    MODEL_CACHE_TTL_SECONDS,
+    PUBLIC_MODELS_CACHE_KEY,
+)
 from app.envelope import AppError
 from app.repos import audit_repo, model_repo
 from app.services.session_auth import Principal, ensure_admin
@@ -125,6 +129,44 @@ async def get_enabled_by_id(
     return row
 
 
+@dataclass(frozen=True)
+class PublicModel:
+    name: str
+    context_window: int
+    max_output_tokens: int
+
+
+async def list_public(
+    redis: Redis, session_factory: async_sessionmaker[AsyncSession]
+) -> list[PublicModel]:
+    """Enabled models, for the public docs. No auth, so no per-request MySQL:
+    served from Redis, refilled at most once per TTL. Redis down is a 503
+    (fail closed) rather than an unauthenticated path onto the database."""
+    cached = await redis.get(PUBLIC_MODELS_CACHE_KEY)
+    if cached is not None:
+        try:
+            return [PublicModel(**item) for item in json.loads(cached)]
+        except (TypeError, ValueError):
+            pass  # a corrupt entry is a miss
+
+    async with session_factory() as session:
+        rows = await model_repo.list_enabled(session)
+    models = [
+        PublicModel(
+            name=row.name,
+            context_window=row.context_window,
+            max_output_tokens=row.max_output_tokens,
+        )
+        for row in rows
+    ]
+    await redis.set(
+        PUBLIC_MODELS_CACHE_KEY,
+        json.dumps([model.__dict__ for model in models]),
+        ex=MODEL_CACHE_TTL_SECONDS,
+    )
+    return models
+
+
 async def list_models(
     session: AsyncSession, *, principal: Principal
 ) -> list[model_repo.ModelRow]:
@@ -170,7 +212,7 @@ async def manage_model(
     # the cache TTL runs out.
     for attempt in range(1, CACHE_INVALIDATION_ATTEMPTS + 1):
         try:
-            await redis.delete(MODEL_CACHE_KEY)
+            await redis.delete(MODEL_CACHE_KEY, PUBLIC_MODELS_CACHE_KEY)
             return
         except RedisError:
             if attempt < CACHE_INVALIDATION_ATTEMPTS:

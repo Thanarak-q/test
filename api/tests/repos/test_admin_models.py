@@ -77,3 +77,34 @@ async def test_quota_health_check_alerts_on_schema_change(redis, caplog):
     problems = await check(redis, 5)
 
     assert problems and "ALERT" in caplog.text
+
+
+@pytest.fixture
+async def public(db, redis):
+    app.state.redis = redis
+    transport = httpx.ASGITransport(app=app, client=("127.0.0.1", 50000))
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://localhost"
+    ) as http:
+        yield http
+
+
+async def test_public_list_needs_no_auth_and_shows_enabled_only(public, as_role):
+    await as_role("/v1/admin/models/disable", "admin", {"id": 2})
+
+    response = await public.get("/v1/public/models")
+
+    assert response.status_code == 200
+    assert response.json()["data"] == [
+        {"name": "gpt-4o", "context_window": 128000, "max_output_tokens": 16384}
+    ]
+
+
+async def test_public_list_follows_admin_changes(public, as_role):
+    before = await public.get("/v1/public/models")  # fills the cache
+    await as_role("/v1/admin/models/disable", "admin", {"id": 1})
+
+    after = await public.get("/v1/public/models")
+
+    assert "gpt-4o" in [m["name"] for m in before.json()["data"]]
+    assert "gpt-4o" not in [m["name"] for m in after.json()["data"]]

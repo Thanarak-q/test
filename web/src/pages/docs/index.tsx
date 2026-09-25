@@ -4,6 +4,7 @@ import { createElement, lazy, Suspense, type ComponentProps } from "react";
 import { z } from "zod";
 import { CodeBlock } from "./components/CodeBlock";
 import { CodeTabs, LANGUAGES } from "./components/CodeTabs";
+import { ModelsTable } from "./components/ModelsTable";
 import { Value } from "./components/Value";
 import { docsNav, findDoc, LOCALES, type Locale } from "./nav";
 
@@ -44,7 +45,8 @@ const LocaleSwitch = () => {
           key={option}
           to="."
           search={(prev) => ({ ...prev, locale: option === "en" ? undefined : option })}
-          aria-current={option === locale ? "true" : undefined}
+          // data-selected, not aria-current: Link sets aria-current itself.
+          data-selected={option === locale || undefined}
           lang={option}
         >
           {LOCALE_LABELS[option]}
@@ -76,6 +78,7 @@ const mdxComponents: MDXComponents = {
   ),
   CodeBlock,
   CodeTabs,
+  ModelsTable,
   Value,
 };
 

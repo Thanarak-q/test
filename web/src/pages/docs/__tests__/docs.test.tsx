@@ -5,6 +5,14 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { docsNav } from "../nav";
 
+const publicModels = [
+  { name: "gpt-4.1", context_window: 1_047_576, max_output_tokens: 32_768 },
+  { name: "gpt-4o", context_window: 128_000, max_output_tokens: 16_384 },
+];
+vi.mock("@/api/generated/public/public", () => ({
+  useListPublicModels: () => ({ data: publicModels, isPending: false, isError: false }),
+}));
+
 const allPages = docsNav.flatMap((group) => group.pages);
 
 beforeAll(() => {
@@ -91,15 +99,15 @@ describe("docs", () => {
     expect(within(main).getByRole("link", { name: "Docs" })).toHaveAttribute("href", "/docs");
   });
 
-  it("shows placeholders as a dash, never as raw values or a notice", async () => {
+  it("lists the enabled models from the API", async () => {
     await open("/docs/models");
     await screen.findByRole("heading", { level: 1, name: "Models" });
 
     const table = within(article()).getByRole("table");
-    const pending = docsValues.models.filter((model) => model.contextWindow === 0);
-    expect(within(table).getAllByText("—")).toHaveLength(pending.length);
+    expect(within(table).getByText("gpt-4.1")).toBeVisible();
+    expect(within(table).getByText("1,047,576")).toBeVisible();
+    expect(within(table).getByText("16,384")).toBeVisible();
     expect(article()).not.toHaveTextContent(/to be confirmed/i);
-    expect(article()).not.toHaveTextContent(/\bTBD\b/);
   });
 
   it("copies code and announces it in a live region", async () => {

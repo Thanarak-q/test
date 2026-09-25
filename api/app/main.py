@@ -22,7 +22,7 @@ from app.constants.infra import (
 )
 from app.constants.llm import MAX_OUTBOUND_CONCURRENCY
 from app.envelope import EnvelopeRoute, error_response, register_error_handlers
-from app.routers import admin_models, api_keys, chat, dashboard, health
+from app.routers import admin_models, api_keys, chat, dashboard, health, public_models
 from app.services.perkey_rate_limit import check_token_bucket_fits_largest_request
 from app.services.provider import PROVIDER_TIMEOUT, check_provider_config
 from app.services.proxy_trust import build_trusted_proxy_set
@@ -175,6 +175,7 @@ app.include_router(api_keys.router)
 app.include_router(dashboard.router)
 app.include_router(chat.router)
 app.include_router(admin_models.router)
+app.include_router(public_models.router)
 
 
 @app.get("/metrics", include_in_schema=False)

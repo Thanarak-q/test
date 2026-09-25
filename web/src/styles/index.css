@@ -1361,8 +1361,9 @@ main:focus {
 }
 .locale-switch {
   display: inline-flex;
+  justify-self: start;
   gap: 2px;
-  margin: 16px 10px 4px;
+  margin: 0 0 0 10px;
   padding: 2px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1376,7 +1377,7 @@ main:focus {
 .locale-switch a:hover {
   color: var(--foreground);
 }
-.locale-switch a[aria-current="true"]::before {
+.locale-switch a[data-selected]::before {
   content: "";
   display: inline-block;
   width: 5px;
@@ -1386,7 +1387,7 @@ main:focus {
   background: var(--accent);
   vertical-align: middle;
 }
-.locale-switch a[aria-current="true"] {
+.locale-switch a[data-selected] {
   background: var(--surface-hover);
   color: #fff;
   font-weight: 500;

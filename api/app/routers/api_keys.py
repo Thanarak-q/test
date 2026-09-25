@@ -10,7 +10,6 @@ from app.db import get_unbegun_session
 from app.dependencies import get_current_user
 from app.envelope import EnvelopeRoute
 from app.redis import get_redis
-from app.repos.auth_cache import RedisAuthCache
 from app.services import api_keys
 from app.services.proxy_trust import best_effort_client_ip
 
@@ -63,6 +62,7 @@ def _context(request: Request, user_id: int) -> api_keys.RequestContext:
     return api_keys.RequestContext(
         user_id=user_id,
         source_ip=best_effort_client_ip(request, request.app.state.trusted_proxies),
+        request_id=getattr(request.state, "request_id", None),
     )
 
 
@@ -110,9 +110,7 @@ async def revoke_api_key(
     session: AsyncSession = Depends(get_unbegun_session),
     redis: Redis = Depends(get_redis),
 ) -> OkResponse:
-    await api_keys.revoke_key(
-        session, RedisAuthCache(redis), _context(request, user_id), body.id
-    )
+    await api_keys.revoke_key(session, redis, _context(request, user_id), body.id)
     return OkResponse()
 
 
@@ -124,7 +122,5 @@ async def delete_api_key(
     session: AsyncSession = Depends(get_unbegun_session),
     redis: Redis = Depends(get_redis),
 ) -> OkResponse:
-    await api_keys.delete_key(
-        session, RedisAuthCache(redis), _context(request, user_id), body.id
-    )
+    await api_keys.delete_key(session, redis, _context(request, user_id), body.id)
     return OkResponse()

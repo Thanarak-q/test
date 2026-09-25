@@ -289,3 +289,20 @@ async def test_secret_is_not_in_result_or_audit():
         )
 
     assert SECRET not in repr(audit.records)
+
+
+async def test_last_used_write_failure_does_not_reject_a_cached_key():
+    # docs/NON_FUNCTIONAL.md §3.2: cached keys keep validating while the
+    # database is down; last_used_at is informational.
+    old = NOW - timedelta(minutes=6)
+    cache = FakeCache(positive=record(last_used_at=old))
+    database = FakeDatabase(error=AuthInfrastructureError("database down"))
+
+    identity = await validate_api_key(
+        TOKEN,
+        "203.0.113.8",
+        **dependencies(cache=cache, database=database),
+    )
+
+    assert identity == {"user_id": 42, "key_id": KEY_ID}
+    assert cache.positive_writes == []  # unchanged record is not re-cached

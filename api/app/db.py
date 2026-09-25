@@ -8,20 +8,26 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import TypeDecorator
 
 from app.config import settings
+from app.constants.infra import DB_CONNECT_TIMEOUT_SECONDS, DB_POOL_TIMEOUT_SECONDS
 
-# ponytail: /v1/chat holds its connection for the whole provider call (up to
-# llm_timeout_s), so the pool — not the CPU — is what caps concurrent chats. Sized to
-# outrun the rate limiter; split the request into pre-call and post-call sessions if
-# chat concurrency ever has to exceed it.
+# TODO(chat-pipeline): docs/NON_FUNCTIONAL.md §2.2 — never hold a pooled
+# connection during the provider call. get_session keeps one for the whole
+# request, so a chat route must not depend on it across the call: read,
+# release, call the provider, then open a new session for the writes.
+# pool_timeout keeps an exhausted pool a fast 503 rather than a queue.
 engine = create_async_engine(
     settings.database_url,
     pool_pre_ping=True,
     pool_size=settings.db_pool_size,
     max_overflow=settings.db_max_overflow,
     pool_recycle=1800,
+    pool_timeout=DB_POOL_TIMEOUT_SECONDS,
     # Server-side NOW() follows the session zone; pin it so anything SQL-side
     # agrees with the UTC the app writes. The app still sets every timestamp.
-    connect_args={"init_command": "SET time_zone = '+00:00'"},
+    connect_args={
+        "init_command": "SET time_zone = '+00:00'",
+        "connect_timeout": DB_CONNECT_TIMEOUT_SECONDS,
+    },
 )
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 

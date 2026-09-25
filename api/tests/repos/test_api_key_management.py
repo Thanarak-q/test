@@ -10,11 +10,11 @@ import hashlib
 import pytest
 from sqlalchemy import func, select
 
+from app.constants.api_keys import MAX_ACTIVE_KEYS as MAX_KEYS
 from app.main import app
 from app.models import ApiKey, ApiKeyAuditLog
 from app.repos.auth_cache import RedisAuthCache
 from app.repos.auth_database import SqlAuthDatabase, SqlFailureAudit
-from app.services.api_keys import MAX_KEYS
 from app.services.validate_api_key import positive_cache_key, validate_api_key
 from tests.repos.helpers import ALICE, BOB, as_user
 
@@ -25,18 +25,21 @@ async def create(client, user_id, name="key"):
     )
 
 
+def without_request_id(headers) -> dict[str, str]:
+    return {k: v for k, v in headers.items() if k.lower() != "x-request-id"}
+
+
 async def authenticates(db, redis, token) -> bool:
-    async with db.begin() as session:
-        try:
-            await validate_api_key(
-                token,
-                "203.0.113.9",
-                cache=RedisAuthCache(redis),
-                database=SqlAuthDatabase(session),
-                audit=SqlFailureAudit(db),
-            )
-        except Exception:  # noqa: BLE001 — any refusal counts as "no"
-            return False
+    try:
+        await validate_api_key(
+            token,
+            "203.0.113.9",
+            cache=RedisAuthCache(redis),
+            database=SqlAuthDatabase(db),
+            audit=SqlFailureAudit(db),
+        )
+    except Exception:  # noqa: BLE001 — any refusal counts as "no"
+        return False
     return True
 
 
@@ -80,7 +83,9 @@ async def test_not_yours_is_byte_identical_to_does_not_exist(client, action):
 
     assert not_yours.status_code == missing.status_code == 404
     assert not_yours.content == missing.content
-    assert dict(not_yours.headers) == dict(missing.headers)
+    # X-Request-Id is unique per request by design and says nothing about
+    # the key; every other header must match exactly.
+    assert without_request_id(not_yours.headers) == without_request_id(missing.headers)
 
 
 async def test_list_shows_only_your_keys(client):

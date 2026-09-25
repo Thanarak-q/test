@@ -1,6 +1,7 @@
 # AGENTS.md
 
-Rules that must not be broken. Details live in `docs/STRUCTURE.md`, rationale in `docs/DECISIONS.md`.
+Rules that must not be broken. Details live in `docs/STRUCTURE.md`, rationale in `docs/DECISIONS.md`,
+maintainability / scalability / availability rules in `docs/NON_FUNCTIONAL.md`.
 
 ## Shape
 
@@ -26,6 +27,7 @@ Rules that must not be broken. Details live in `docs/STRUCTURE.md`, rationale in
 - Arrow functions everywhere, both sides of the repo: `export const foo = () => {}`.
 - TypeScript: `type`, never `interface` (the only exception is declaration merging a framework demands, e.g. `ImportMeta`).
 - Python repos are plain async module functions taking `session: AsyncSession` first. No BaseRepository, no unit-of-work. Repos do not commit — the caller owns the transaction.
+- SQL lives only in `app/repos/{table}_repo.py`: named `text()` constants, bound parameters, keyword-only arguments, dataclass results (`docs/NON_FUNCTIONAL.md` §1.1).
 
 ## Gates before commit
 

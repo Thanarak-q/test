@@ -13,11 +13,9 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.constants.retention import USAGE_DEFAULT_RANGE_DAYS, USAGE_RETENTION_DAYS
 from app.envelope import AppError
 from app.services import api_keys, llm_usage
-
-USAGE_RETENTION_DAYS = 60
-DEFAULT_RANGE_DAYS = 7
 
 Source = Literal["api", "web"]
 
@@ -92,7 +90,7 @@ async def usage_report(
     requested_to = date_to or current
     # Presets ("last 30 days") are resolved here, not in the browser, so
     # "today" is always Asia/Bangkok's today.
-    span = days or DEFAULT_RANGE_DAYS
+    span = days or USAGE_DEFAULT_RANGE_DAYS
     requested_from = date_from or requested_to - timedelta(days=span - 1)
     if requested_from > requested_to:
         raise AppError("usage_invalid_range", "`from` must not be after `to`.", 422)

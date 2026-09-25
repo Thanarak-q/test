@@ -10,7 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.models import ApiKey, AuthFailureLog
-from app.repos import api_keys
+from app.repos import api_key_repo
 from app.repos.auth_cache import RedisAuthCache
 from app.repos.auth_database import SqlAuthDatabase, SqlFailureAudit
 from app.services.validate_api_key import (
@@ -52,16 +52,15 @@ async def _validate(token, *, cache, database, factory):
 
 async def test_redis_down_is_503_and_never_reaches_the_database(db, unreachable_redis):
     key_id, token = await seed_key(db, user_id=1)
-    async with db() as session:
-        database = SpyDatabase(SqlAuthDatabase(session))
+    database = SpyDatabase(SqlAuthDatabase(db))
 
-        with pytest.raises(HTTPException) as exc_info:
-            await _validate(
-                token,
-                cache=RedisAuthCache(unreachable_redis),
-                database=database,
-                factory=db,
-            )
+    with pytest.raises(HTTPException) as exc_info:
+        await _validate(
+            token,
+            cache=RedisAuthCache(unreachable_redis),
+            database=database,
+            factory=db,
+        )
 
     assert exc_info.value.status_code == 503
     assert database.calls == 0  # no fallback to MySQL on every request
@@ -96,14 +95,13 @@ async def test_database_down_is_503_not_401(redis):
     factory = async_sessionmaker(engine)
     _, _, token = new_token()
     try:
-        async with factory() as session:
-            with pytest.raises(HTTPException) as exc_info:
-                await _validate(
-                    token,
-                    cache=RedisAuthCache(redis),
-                    database=SqlAuthDatabase(session),
-                    factory=factory,
-                )
+        with pytest.raises(HTTPException) as exc_info:
+            await _validate(
+                token,
+                cache=RedisAuthCache(redis),
+                database=SqlAuthDatabase(factory),
+                factory=factory,
+            )
     finally:
         await engine.dispose()
 
@@ -114,11 +112,10 @@ async def test_database_timeout_is_enforced(db, monkeypatch):
     async def slow(*_args, **_kwargs):
         await asyncio.sleep(5)
 
-    monkeypatch.setattr(api_keys, "get_auth_record", slow)
-    async with db() as session:
-        started = asyncio.get_running_loop().time()
-        with pytest.raises(AuthInfrastructureError):
-            await SqlAuthDatabase(session).get_by_key_id("K", timeout_seconds=0.2)
+    monkeypatch.setattr(api_key_repo, "get_for_auth", slow)
+    started = asyncio.get_running_loop().time()
+    with pytest.raises(AuthInfrastructureError):
+        await SqlAuthDatabase(db).get_by_key_id("K", timeout_seconds=0.2)
 
     assert asyncio.get_running_loop().time() - started < 1
 
@@ -144,16 +141,14 @@ async def test_failure_audit_raises_when_database_is_down():
 async def test_valid_key_authenticates_then_serves_from_cache(db, redis):
     key_id, token = await seed_key(db, user_id=7)
 
-    async with db.begin() as session:
-        first = SpyDatabase(SqlAuthDatabase(session))
-        identity = await _validate(
-            token, cache=RedisAuthCache(redis), database=first, factory=db
-        )
-    async with db.begin() as session:
-        second = SpyDatabase(SqlAuthDatabase(session))
-        again = await _validate(
-            token, cache=RedisAuthCache(redis), database=second, factory=db
-        )
+    first = SpyDatabase(SqlAuthDatabase(db))
+    identity = await _validate(
+        token, cache=RedisAuthCache(redis), database=first, factory=db
+    )
+    second = SpyDatabase(SqlAuthDatabase(db))
+    again = await _validate(
+        token, cache=RedisAuthCache(redis), database=second, factory=db
+    )
 
     assert identity == {"user_id": 7, "key_id": key_id}
     assert again == identity
@@ -194,11 +189,10 @@ async def test_naive_cached_timestamp_is_treated_as_a_miss(db, redis):
     }
     await redis.set(positive_cache_key(key_id), json.dumps(poisoned))
 
-    async with db.begin() as session:
-        database = SpyDatabase(SqlAuthDatabase(session))
-        identity = await _validate(
-            token, cache=RedisAuthCache(redis), database=database, factory=db
-        )
+    database = SpyDatabase(SqlAuthDatabase(db))
+    identity = await _validate(
+        token, cache=RedisAuthCache(redis), database=database, factory=db
+    )
 
     assert identity["user_id"] == 7  # from MySQL, not the poisoned entry
     assert database.calls >= 1
@@ -207,14 +201,13 @@ async def test_naive_cached_timestamp_is_treated_as_a_miss(db, redis):
 async def test_unknown_key_is_401_and_audited(db, redis):
     key_id, _, token = new_token()
 
-    async with db() as session:
-        with pytest.raises(HTTPException) as exc_info:
-            await _validate(
-                token,
-                cache=RedisAuthCache(redis),
-                database=SqlAuthDatabase(session),
-                factory=db,
-            )
+    with pytest.raises(HTTPException) as exc_info:
+        await _validate(
+            token,
+            cache=RedisAuthCache(redis),
+            database=SqlAuthDatabase(db),
+            factory=db,
+        )
 
     assert exc_info.value.status_code == 401
     async with db() as session:
@@ -231,13 +224,12 @@ async def test_status_not_revoked_at_decides_validity(db, redis):
             .values(revoked_at=datetime.now(UTC))
         )
 
-    async with db.begin() as session:
-        identity = await _validate(
-            token,
-            cache=RedisAuthCache(redis),
-            database=SqlAuthDatabase(session),
-            factory=db,
-        )
+    identity = await _validate(
+        token,
+        cache=RedisAuthCache(redis),
+        database=SqlAuthDatabase(db),
+        factory=db,
+    )
 
     assert identity["key_id"] == key_id
 

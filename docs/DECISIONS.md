@@ -179,11 +179,48 @@ from other failures and never shows it as success.
 off the secret for display — that leaked part of it. The prefix is now
 `mthw01_{key_id}`, built server-side, containing nothing of the secret.
 
+## 2026-09-25 — non-functional rules (`docs/NON_FUNCTIONAL.md`)
+
+**Repos are raw SQL in named functions.** Every query is a module-level `text()`
+constant named after its function, with bound parameters only (the `DATE_FORMAT`
+pattern too), keyword-only arguments and dataclass results. Modules are per table:
+`api_key_repo`, `audit_repo`, `usage_repo`. Routers and `dependencies.py` never import
+repos; services construct the Redis/MySQL adapters.
+
+**Auth reads MySQL through its own short session.** `SqlAuthDatabase` takes the session
+factory rather than the request's session, so an API-key request releases its pooled
+connection as soon as the key is looked up — the precondition for the chat route not
+holding one across the provider call.
+
+**A failed `last_used_at` write no longer rejects a cached key.** The availability
+table says cached keys keep validating while MySQL is down until their TTL. The write
+is informational, so its failure is logged and the record is not re-cached; a cache
+miss with MySQL down is still 503. This relaxes brief rule 6 for this one write only.
+
+**Connectivity errors are 503 app-wide.** `OperationalError`, `InterfaceError`,
+`DisconnectionError`, pool `TimeoutError` and `RedisError` map to `service_unavailable`;
+an `IntegrityError` (a bug) stays a 500.
+
+**Every external call has a timeout** (`app/constants/infra.py`): Redis 1s connect and
+socket, MySQL 2s connect and 2s pool wait.
+
+**`X-Request-Id` on every response.** The public docs tell users to quote it, and audit
+rows had a `request_id` column that nothing filled. An incoming id is kept only from
+the trusted proxy (so nginx's `$request_id` can tie logs together), otherwise replaced.
+Identical-404 checks compare every header except this one, which is unique per request
+by design.
+
+**Retention job.** `app/jobs/retention.py` deletes in batches of 5,000, one short
+transaction each, so it never holds locks the request path waits on; `created_at`
+indexes (migration `20260925_retention`) keep each batch off a table scan. Audit and
+auth-failure logs keep 90 days, usage 60.
+
 ## Out of scope until asked
 
 - Multi-user, workspaces, invitations. `user_id` columns exist so adding it later is a
   migration rather than a rewrite, but no auth flow is built.
-- Background jobs, general response caching.
+- General response caching. (The retention job is the one scheduled job; anything
+  else scheduled needs asking first.)
 - A component library. Run `shadcn add` inside `web/` when the first real component is
   needed — do not copy components in from another project (shadcn 4.x generates against
   Base UI, not Radix, so cross-project copies break).

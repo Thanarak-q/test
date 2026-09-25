@@ -2,23 +2,16 @@
 
 from fastapi import Depends, Request
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import SessionLocal, get_session
 from app.redis import get_redis
-from app.repos.auth_cache import RedisAuthCache
-from app.repos.auth_database import SqlAuthDatabase, SqlFailureAudit
+from app.services.api_key_auth import authenticate
 from app.services.pre_auth_rate_limit import (
     check_pre_auth_rate_limit,
     refund_pre_auth_token,
 )
 from app.services.proxy_trust import get_client_ip, require_https
 from app.services.session_auth import Principal, resolve_principal
-from app.services.validate_api_key import (
-    AuthIdentity,
-    invalid_credential,
-    validate_api_key,
-)
+from app.services.validate_api_key import AuthIdentity, invalid_credential
 
 _BEARER = "bearer "
 
@@ -26,7 +19,6 @@ _BEARER = "bearer "
 async def require_api_key(
     request: Request,
     redis: Redis = Depends(get_redis),
-    session: AsyncSession = Depends(get_session),
 ) -> AuthIdentity:
     """The public API's authentication, in the order the threat model fixes.
 
@@ -44,12 +36,8 @@ async def require_api_key(
         # Same 401 as every other credential failure.
         raise invalid_credential()
 
-    identity = await validate_api_key(
-        authorization[len(_BEARER) :].strip(),
-        client_ip,
-        cache=RedisAuthCache(redis),
-        database=SqlAuthDatabase(session),
-        audit=SqlFailureAudit(SessionLocal),
+    identity = await authenticate(
+        authorization[len(_BEARER) :].strip(), client_ip, redis
     )
     await refund_pre_auth_token(redis, client_ip)
     return identity

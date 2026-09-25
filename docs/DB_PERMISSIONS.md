@@ -20,8 +20,17 @@ Migrations run as a separate, more privileged user. The app user never runs DDL.
 lock with `INSERT … ON DUPLICATE KEY UPDATE id = id`, which MySQL checks against the
 `UPDATE` privilege even though nothing changes.
 
-Retention (60 days for `llm_usage_logs`) is enforced by a job running as a separate
-user that holds `DELETE` on that table only. That job does not exist yet.
+Retention is enforced by `python -m app.jobs.retention` (run daily from cron) as a
+separate user that holds `SELECT, DELETE` on the three log tables only: 60 days for
+`llm_usage_logs`, 90 for `identity_api_key_audit_logs` and `identity_auth_failure_logs`
+(`app/constants/retention.py`).
+
+```sql
+CREATE USER 'matthew_retention'@'%' IDENTIFIED BY '...';
+GRANT SELECT, DELETE ON matthew.llm_usage_logs              TO 'matthew_retention'@'%';
+GRANT SELECT, DELETE ON matthew.identity_api_key_audit_logs TO 'matthew_retention'@'%';
+GRANT SELECT, DELETE ON matthew.identity_auth_failure_logs  TO 'matthew_retention'@'%';
+```
 
 ```sql
 -- as an admin, once per environment; replace the password

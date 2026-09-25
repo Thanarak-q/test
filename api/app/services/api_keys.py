@@ -15,19 +15,22 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants.api_keys import (
+    CACHE_INVALIDATION_ATTEMPTS,
+    CACHE_INVALIDATION_BACKOFF_SECONDS,
+    KEY_TOKEN_PREFIX,
+    MAX_ACTIVE_KEYS,
+    SECRET_LENGTH,
+)
 from app.envelope import AppError
-from app.repos import api_key_audit, api_keys
+from app.repos import api_key_repo, audit_repo
 from app.repos.auth_cache import RedisAuthCache
 from app.services.validate_api_key import AuthInfrastructureError
 
 logger = logging.getLogger(__name__)
-
-MAX_KEYS = 5
-KEY_TOKEN_PREFIX = "mthw01"
-SECRET_LENGTH = 32
-CACHE_INVALIDATION_ATTEMPTS = 3
 
 _BASE62 = string.ascii_letters + string.digits
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -82,20 +85,20 @@ async def create_key(
     now = datetime.now(UTC)
 
     async with session.begin():
-        await api_keys.lock_user(session, ctx.user_id)
-        inserted = await api_keys.insert_if_under_limit(
+        await api_key_repo.lock_user(session, user_id=ctx.user_id)
+        inserted = await api_key_repo.insert_if_under_limit(
             session,
             key_id=key_id,
             user_id=ctx.user_id,
             name=name,
             key_hash=key_hash,
             created_at=now,
-            max_active=MAX_KEYS,
+            max_active=MAX_ACTIVE_KEYS,
         )
         if not inserted:
             raise AppError(
                 "identity_api_key_limit_reached",
-                f"You can have up to {MAX_KEYS} active API keys. "
+                f"You can have up to {MAX_ACTIVE_KEYS} active API keys. "
                 "Revoke one before creating another.",
                 409,
             )
@@ -112,7 +115,7 @@ async def create_key(
 
 async def list_keys(session: AsyncSession, user_id: int) -> list[KeySummary]:
     async with session.begin():
-        rows = await api_keys.list_for_user(session, user_id)
+        rows = await api_key_repo.list_for_user(session, user_id=user_id)
     return [
         KeySummary(
             id=row.id,
@@ -129,21 +132,23 @@ async def list_keys(session: AsyncSession, user_id: int) -> list[KeySummary]:
 
 async def labels(
     session: AsyncSession, user_id: int, key_ids: list[str]
-) -> dict[str, api_keys.KeyLabel]:
+) -> dict[str, api_key_repo.KeyLabelRow]:
     """For other modules: runs inside the caller's transaction."""
-    rows = await api_keys.labels_for_user(session, user_id=user_id, key_ids=key_ids)
+    rows = await api_key_repo.labels_for_user(session, user_id=user_id, key_ids=key_ids)
     return {row.id: row for row in rows}
 
 
 async def revoke_key(
-    session: AsyncSession, cache: RedisAuthCache, ctx: RequestContext, key_id: str
+    session: AsyncSession, redis: Redis, ctx: RequestContext, key_id: str
 ) -> None:
     now = datetime.now(UTC)
     async with session.begin():
-        if await api_keys.revoke(session, key_id=key_id, user_id=ctx.user_id, at=now):
+        if await api_key_repo.revoke(
+            session, key_id=key_id, user_id=ctx.user_id, at=now
+        ):
             await _audit(session, ctx, "key.revoked", key_id, now)
         else:
-            status = await api_keys.get_status(
+            status = await api_key_repo.get_status(
                 session, key_id=key_id, user_id=ctx.user_id
             )
             if status is None or status == "deleted":
@@ -153,36 +158,36 @@ async def revoke_key(
     # After the commit, so a concurrent lookup cannot re-cache the old status.
     # Also on the idempotent path: a retry after a failed invalidation must
     # get another chance to clear the cache.
-    await _invalidate_cache(cache, key_id)
+    await _invalidate_cache(RedisAuthCache(redis), key_id)
 
 
 async def delete_key(
-    session: AsyncSession, cache: RedisAuthCache, ctx: RequestContext, key_id: str
+    session: AsyncSession, redis: Redis, ctx: RequestContext, key_id: str
 ) -> None:
     now = datetime.now(UTC)
     async with session.begin():
-        if await api_keys.soft_delete(
+        if await api_key_repo.soft_delete(
             session, key_id=key_id, user_id=ctx.user_id, at=now
         ):
             await _audit(session, ctx, "key.deleted", key_id, now)
         elif (
-            await api_keys.get_status(session, key_id=key_id, user_id=ctx.user_id)
+            await api_key_repo.get_status(session, key_id=key_id, user_id=ctx.user_id)
             != "deleted"
         ):
             raise _not_found()
 
-    await _invalidate_cache(cache, key_id)
+    await _invalidate_cache(RedisAuthCache(redis), key_id)
 
 
 async def _audit(
     session: AsyncSession,
     ctx: RequestContext,
-    action: api_key_audit.KeyAction,
+    action: audit_repo.KeyAction,
     key_id: str,
     at: datetime,
 ) -> None:
     # Same transaction as the change: if this insert fails, the change does too.
-    await api_key_audit.insert_key_event(
+    await audit_repo.record_key_event(
         session,
         user_id=ctx.user_id,
         action=action,
@@ -208,7 +213,7 @@ async def _invalidate_cache(cache: RedisAuthCache, key_id: str) -> None:
             return
         except AuthInfrastructureError:
             if attempt < CACHE_INVALIDATION_ATTEMPTS:
-                await asyncio.sleep(0.05 * attempt)
+                await asyncio.sleep(CACHE_INVALIDATION_BACKOFF_SECONDS * attempt)
 
     logger.error(
         "ALERT api key cache invalidation failed; key may authenticate for up "

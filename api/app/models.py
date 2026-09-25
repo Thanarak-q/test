@@ -99,7 +99,8 @@ class ApiKeyAuditLog(Base):
     target_id: Mapped[str] = mapped_column(String(26), nullable=False, index=True)
     request_id: Mapped[str | None] = mapped_column(String(64), index=True)
     source_ip: Mapped[str | None] = mapped_column(String(45))
-    created_at: Mapped[datetime] = mapped_column(nullable=False)
+    # Indexed for the retention job, which deletes by age.
+    created_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
 
 
 class AuthFailureLog(Base):
@@ -117,7 +118,7 @@ class AuthFailureLog(Base):
     key_id: Mapped[str] = mapped_column(String(26), nullable=False, index=True)
     source_ip: Mapped[str] = mapped_column(String(45), nullable=False, index=True)
     reason: Mapped[str] = mapped_column(String(32), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
 
 
 # region llm — TODO(chat-pipeline): shape agreed provisionally; confirm with the
@@ -147,7 +148,7 @@ class LlmQuota(Base):
 
 
 class LlmUsageLog(Base):
-    """Append-only. Retained 60 days."""
+    """Append-only. Retained USAGE_RETENTION_DAYS (app/constants/retention.py)."""
 
     __tablename__ = "llm_usage_logs"
     __table_args__ = (
@@ -168,7 +169,9 @@ class LlmUsageLog(Base):
     completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     total_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False)
+    # (user_id, created_at) serves the dashboard; this one serves retention,
+    # which deletes by age across all users.
+    created_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
 
 
 # endregion

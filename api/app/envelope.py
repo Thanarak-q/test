@@ -47,7 +47,7 @@ class AppError(Exception):
         self.headers = headers
 
 
-def _fail(
+def error_response(
     code: str,
     message: str,
     status_code: int,
@@ -103,11 +103,11 @@ class EnvelopeRoute(APIRoute):
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
-        return _fail(exc.code, exc.message, exc.status_code, exc.headers)
+        return error_response(exc.code, exc.message, exc.status_code, exc.headers)
 
     @app.exception_handler(HTTPException)
     async def _http_error(_: Request, exc: HTTPException) -> JSONResponse:
-        return _fail(
+        return error_response(
             f"http_{exc.status_code}",
             str(exc.detail),
             exc.status_code,
@@ -118,7 +118,7 @@ def register_error_handlers(app: FastAPI) -> None:
     async def _validation_error(
         _: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        return _fail(
+        return error_response(
             "validation_error",
             "; ".join(
                 f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()
@@ -129,7 +129,7 @@ def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
         logger.exception("unhandled error on %s %s", request.method, request.url.path)
-        return _fail(
+        return error_response(
             "internal_error",
             "Something went wrong.",
             status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -16,8 +16,9 @@ api/
     ├── dependencies.py       require_api_key (public API) · get_current_user (dashboard session)
     ├── routers/{f}.py        HTTP only · APIRouter(prefix="/v1/{f}", route_class=EnvelopeRoute)
     ├── services/{f}.py       the domain work; receives a session, owns the transaction
-    ├── repos/{f}.py          async module functions, SQLAlchemy lives only here
-    └── constants/
+    ├── repos/{table}_repo.py named text() SQL functions, the only place SQL lives
+    ├── jobs/retention.py     cron: delete logs past retention (own DB user)
+    └── constants/            every limit/TTL/timeout, each with its reason
 tests/                        pytest, asyncio_mode=auto · tests/repos/ = real MySQL + Redis
 
 web/
@@ -60,7 +61,7 @@ web/
 
 1. `api/app/models.py` — table with domain prefix + `user_id`.
 2. `alembic revision --autogenerate` — read the generated migration, MySQL autogenerate misses type changes.
-3. `api/app/repos/{domain}.py` — async functions, `session` first, scope by `user_id`, no commit.
+3. `api/app/repos/{table}_repo.py` — named `text()` SQL, `session` first then keyword-only args, scope by `user_id`, return dataclasses, no commit (`docs/NON_FUNCTIONAL.md` §1.1).
 4. `api/app/services/{domain}.py` — the work, if it is more than one repo call.
 5. `api/app/routers/{domain}.py` — `APIRouter(prefix="/v1/{domain}", route_class=EnvelopeRoute)`, then include it in `main.py`. Validate in, call the repo/service, return the DTO; the route class adds the envelope.
 6. `bun run --cwd web gen:api` with the API running — never hand-write the response type in web.

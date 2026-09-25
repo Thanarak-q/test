@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.constants.retention import USAGE_RETENTION_DAYS
 from app.db import get_session
 from app.dependencies import get_current_user
 from app.envelope import EnvelopeRoute
@@ -70,7 +71,7 @@ async def get_usage(
     days: int | None = Query(
         None,
         ge=1,
-        le=dashboard.USAGE_RETENTION_DAYS,
+        le=USAGE_RETENTION_DAYS,
         description="Without `from`: the last N days ending at `to` (default today).",
     ),
     key_id: str | None = Query(None, max_length=26),

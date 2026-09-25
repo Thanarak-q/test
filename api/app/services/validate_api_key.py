@@ -6,17 +6,27 @@ import logging
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Protocol, TypedDict
 
 from fastapi import HTTPException
 
+from app.constants.auth import (
+    DATABASE_TIMEOUT_SECONDS,
+    LAST_USED_THROTTLE,
+    NEGATIVE_CACHE_TTL_SECONDS,
+    POSITIVE_CACHE_TTL_SECONDS,
+)
+
 logger = logging.getLogger(__name__)
 
-NEGATIVE_CACHE_TTL_SECONDS = 30
-POSITIVE_CACHE_TTL_SECONDS = 60
-LAST_USED_THROTTLE = timedelta(minutes=5)
-DATABASE_TIMEOUT_SECONDS = 2.0
+__all__ = [
+    "DATABASE_TIMEOUT_SECONDS",
+    "NEGATIVE_CACHE_TTL_SECONDS",
+    "POSITIVE_CACHE_TTL_SECONDS",
+    "validate_api_key",
+]
+
 INVALID_API_KEY_MESSAGE = "Invalid API key."
 AUTH_UNAVAILABLE_MESSAGE = "Authentication is temporarily unavailable."
 
@@ -238,7 +248,16 @@ async def _refresh_last_used(
     ):
         return record
 
-    await database.update_last_used(key_id, user_id=record.user_id, at=current_time)
+    try:
+        await database.update_last_used(key_id, user_id=record.user_id, at=current_time)
+    except AuthInfrastructureError:
+        # docs/NON_FUNCTIONAL.md §3.2: with the database down, a key already
+        # in the positive cache keeps validating until its TTL. last_used_at
+        # is informational, so failing to advance it must not turn a valid
+        # cached key into a 503. The record is returned unchanged, so the
+        # cache is not rewritten and the next request retries the write.
+        logger.warning("last_used_at update failed", extra={"key_id": key_id})
+        return record
     return replace(record, last_used_at=current_time)
 
 

@@ -1,16 +1,16 @@
 """IP rate limiting that runs before API key validation."""
 
-import ipaddress
-from collections.abc import Iterable
 from dataclasses import dataclass
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 CAPACITY = 60  # capacity of token bucket; shared IPs may serve many devices
 REFILL_PER_SECOND = 1.0  # refill token in token bucket
 BUCKET_TTL_SECONDS = 300  # no incoming request from that ip for 5 mins -> delete bucket
+
+RATE_LIMIT_UNAVAILABLE_MESSAGE = "Rate limiting is temporarily unavailable."
 
 # KEYS[1]=bucket  ARGV: capacity, refill_per_second, ttl, cost
 # cost=1 consumes a token; cost=-1 returns one (never above capacity)
@@ -65,32 +65,21 @@ class RateLimitResult:
         }
 
 
-def build_trusted_proxy_set(trusted_proxy_ips: Iterable[str]) -> frozenset[str]:
-    """Normalise trusted proxy addresses once, at startup.
-
-    Doing this per request would add work to the path that exists to reject
-    floods as cheaply as possible.
-    """
-    return frozenset(
-        str(ipaddress.ip_address(address)) for address in trusted_proxy_ips
-    )
-
-
-# other service call this function
-async def enforce_pre_auth_rate_limit(
-    request: Request, redis: Redis, trusted_proxies: frozenset[str]
-) -> RateLimitResult:
-    return await check_pre_auth_rate_limit(
-        redis, get_trusted_proxy_ip(request, trusted_proxies)
-    )
+def bucket_key(ip: str) -> str:
+    return f"rl:ip:{ip}"
 
 
 async def check_pre_auth_rate_limit(redis: Redis, ip: str) -> RateLimitResult:
+    """Spend one token for this IP, or reject the request.
+
+    The IP is expected to come from get_client_ip, which only returns a value
+    for a request that arrived through a trusted proxy.
+    """
     try:
         allowed, remaining, retry_after, reset = await redis.eval(
             _BUCKET_LUA,
             1,  # redis key amount
-            f"rl:ip:{ip}",  # redis key
+            bucket_key(ip),
             CAPACITY,  # ARGV[1]
             REFILL_PER_SECOND,
             BUCKET_TTL_SECONDS,
@@ -101,7 +90,7 @@ async def check_pre_auth_rate_limit(redis: Redis, ip: str) -> RateLimitResult:
         # traffic through unchecked is worse than a temporary outage
         raise HTTPException(
             status_code=503,
-            detail="Rate limiting is temporarily unavailable.",
+            detail=RATE_LIMIT_UNAVAILABLE_MESSAGE,
         ) from exc
 
     # if not allowed
@@ -118,24 +107,27 @@ async def check_pre_auth_rate_limit(redis: Redis, ip: str) -> RateLimitResult:
             },
         )
 
-    return RateLimitResult(
-        limit=CAPACITY, remaining=int(remaining), reset=int(reset)
-    )
+    return RateLimitResult(limit=CAPACITY, remaining=int(remaining), reset=int(reset))
 
 
 async def refund_pre_auth_token(redis: Redis, ip: str) -> None:
     """Return the token spent by a request that turned out to be authentic.
 
     The IP bucket then counts only failures, so a user who misconfigures a key
-    and retries is not locked out once they fix it. A failed refund is ignored:
-    the request already succeeded, and the token refills on its own. This path
-    deliberately does not fail closed.
+    and retries is not locked out once they fix it.
+
+    Call this at most once per request: the bucket has no record of which
+    request spent which token, so repeated refunds would hand back more than
+    was taken.
+
+    A failed refund is ignored. The request already succeeded, the token
+    refills on its own, and this path deliberately does not fail closed.
     """
     try:
         await redis.eval(
             _BUCKET_LUA,
             1,
-            f"rl:ip:{ip}",
+            bucket_key(ip),
             CAPACITY,
             REFILL_PER_SECOND,
             BUCKET_TTL_SECONDS,
@@ -143,36 +135,3 @@ async def refund_pre_auth_token(redis: Redis, ip: str) -> None:
         )
     except RedisError:
         pass
-
-
-def get_trusted_proxy_ip(request: Request, trusted_proxies: frozenset[str]) -> str:
-    # check proxy IP -> nginx
-    proxy_ip = request.client.host if request.client else None
-    if proxy_ip not in trusted_proxies:
-        raise _bad_client_ip()
-
-    # X-Real-IP is set by nginx with proxy_set_header, which overwrites
-    # whatever the client sent. X-Forwarded-For is appended to instead, so its
-    # leftmost values are attacker-controlled and its rightmost value is the
-    # real client only when exactly one proxy sits in front of us. Requiring
-    # X-Real-IP keeps the trusted path unambiguous.
-    client_ip = request.headers.get("X-Real-IP")
-    if client_ip is None:
-        raise _bad_client_ip()
-
-    try:
-        return str(ipaddress.ip_address(client_ip.strip()))
-    except ValueError as exc:
-        raise _bad_client_ip() from exc
-
-
-def _bad_client_ip() -> HTTPException:
-    """One message for every client-IP failure.
-
-    Distinct messages would tell a caller which stage of the pipeline they
-    reached, which helps nobody except someone probing it.
-    """
-    return HTTPException(
-        status_code=400,
-        detail="Request must arrive through a trusted proxy.",
-    )

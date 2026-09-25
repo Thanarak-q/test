@@ -7,7 +7,9 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     cors_origins: list[str] = ["http://localhost:5173"]
+    allowed_hosts: list[str] = ["localhost", "127.0.0.1"]
     app_tz: str = "Asia/Bangkok"
+    trusted_proxy_ips: list[str] = ["127.0.0.1"]
 
     db_pool_size: int = 20
     db_max_overflow: int = 10

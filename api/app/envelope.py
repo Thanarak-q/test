@@ -40,7 +40,12 @@ class AppError(Exception):
         self.status_code = status_code
 
 
-def _fail(code: str, message: str, status_code: int) -> JSONResponse:
+def _fail(
+    code: str,
+    message: str,
+    status_code: int,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
     return JSONResponse(
         status_code=status_code,
         content={
@@ -49,6 +54,7 @@ def _fail(code: str, message: str, status_code: int) -> JSONResponse:
             "error": {"code": code, "message": message},
             "meta": None,
         },
+        headers=headers,
     )
 
 
@@ -94,7 +100,12 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(HTTPException)
     async def _http_error(_: Request, exc: HTTPException) -> JSONResponse:
-        return _fail(f"http_{exc.status_code}", str(exc.detail), exc.status_code)
+        return _fail(
+            f"http_{exc.status_code}",
+            str(exc.detail),
+            exc.status_code,
+            exc.headers,
+        )
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(

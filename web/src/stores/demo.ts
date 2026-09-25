@@ -4,85 +4,129 @@ import { atom } from "nanostores";
 export type DemoKey = {
   id: string;
   name: string;
-  masked: string;
+  keyPrefix: string;
   status: "active" | "revoked";
   createdAt: string;
   lastUsed: string | null;
+  neverUsed: boolean;
+  recommendRevoke: boolean;
 };
+
+export const DEMO_MAX_ACTIVE_KEYS = 5;
+const DEMO_KEY_PREFIX_LENGTH = "mk_demo_".length + 8;
+
+export const getDemoKeyPrefix = (secret: string) => secret.slice(0, DEMO_KEY_PREFIX_LENGTH);
 
 const initialKeys: DemoKey[] = [
   {
     id: "production",
     name: "Production server",
-    masked: "mk_demo_••••••••r7K2",
+    keyPrefix: "mk_demo_prod",
     status: "active",
     createdAt: "2026-08-12T03:00:00Z",
     lastUsed: "2026-09-05T03:42:00Z",
+    neverUsed: false,
+    recommendRevoke: false,
   },
   {
     id: "development",
     name: "Development",
-    masked: "mk_demo_••••••••w9P4",
+    keyPrefix: "mk_demo_dev",
     status: "active",
     createdAt: "2026-08-20T08:00:00Z",
     lastUsed: "2026-09-05T02:15:00Z",
+    neverUsed: false,
+    recommendRevoke: false,
   },
   {
     id: "staging",
     name: "Staging environment",
-    masked: "mk_demo_••••••••n2F8",
+    keyPrefix: "mk_demo_stage",
     status: "active",
     createdAt: "2026-08-28T04:00:00Z",
     lastUsed: "2026-09-04T09:30:00Z",
+    neverUsed: false,
+    recommendRevoke: false,
   },
   {
     id: "local",
     name: "Local testing",
-    masked: "mk_demo_••••••••b5M1",
+    keyPrefix: "mk_demo_local",
     status: "active",
     createdAt: "2026-09-03T01:00:00Z",
     lastUsed: null,
+    neverUsed: true,
+    recommendRevoke: true,
   },
   {
     id: "legacy",
     name: "Previous deployment",
-    masked: "mk_demo_••••••••q3H6",
+    keyPrefix: "mk_demo_legacy",
     status: "revoked",
     createdAt: "2026-07-18T03:00:00Z",
     lastUsed: "2026-08-29T07:00:00Z",
+    neverUsed: false,
+    recommendRevoke: false,
   },
 ];
 
-export const $demoKeys = atom<DemoKey[]>(initialKeys);
+const sortKeys = (keys: DemoKey[]) =>
+  [...keys].sort(
+    (left, right) =>
+      right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id),
+  );
+
+const initialSortedKeys = sortKeys(initialKeys);
+
+export const $demoKeys = atom<DemoKey[]>(initialSortedKeys);
 export const $demoHasUsage = atom(true);
 export const resetDemoKeys = () => {
-  $demoKeys.set(initialKeys);
+  $demoKeys.set(initialSortedKeys);
   $demoHasUsage.set(true);
 };
 
-export const createDemoKey = (name: string, startEmpty = false) => {
+const waitForDemoOperation = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+export const getDemoActiveKeyCount = () =>
+  $demoKeys.get().filter((entry) => entry.status === "active").length;
+
+export const createDemoKey = async (name: string, startEmpty = false) => {
   const trimmed = name.trim();
-  if (!trimmed || trimmed.length > 80)
-    throw new Error("Enter a key name between 1 and 80 characters.");
+  if (!trimmed || trimmed.length > 100)
+    throw new Error("Enter a key name between 1 and 100 characters.");
+  await waitForDemoOperation();
+  if (getDemoActiveKeyCount() >= DEMO_MAX_ACTIVE_KEYS)
+    throw new Error("You can have up to 5 active API keys. Revoke one before creating another.");
   const id = crypto.randomUUID();
-  const secret = `mk_demo_${crypto.randomUUID().replaceAll("-", "")}`;
-  $demoKeys.set([
-    {
-      id,
-      name: trimmed,
-      masked: `mk_demo_••••••••${secret.slice(-4)}`,
-      status: "active",
-      createdAt: new Date().toISOString(),
-      lastUsed: null,
-    },
-    ...(startEmpty ? [] : $demoKeys.get()),
-  ]);
+  let secret = `mk_demo_${crypto.randomUUID().replaceAll("-", "")}`;
+  let keyPrefix = getDemoKeyPrefix(secret);
+  while ($demoKeys.get().some((key) => key.keyPrefix === keyPrefix)) {
+    secret = `mk_demo_${crypto.randomUUID().replaceAll("-", "")}`;
+    keyPrefix = getDemoKeyPrefix(secret);
+  }
+  const currentKeys = startEmpty ? [] : $demoKeys.get();
+  $demoKeys.set(
+    sortKeys([
+      {
+        id,
+        name: trimmed,
+        keyPrefix,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        lastUsed: null,
+        neverUsed: true,
+        recommendRevoke: false,
+      },
+      ...currentKeys,
+    ]),
+  );
   if (startEmpty) $demoHasUsage.set(false);
   // The full demo secret is returned once and never retained in the store.
   return secret;
 };
 
-export const revokeDemoKey = (id: string) => {
+export const revokeDemoKey = async (id: string) => {
+  await waitForDemoOperation();
   const key = $demoKeys.get().find((entry) => entry.id === id);
   if (!key || key.status === "revoked")
     throw new Error("This key is no longer active. Close this dialog and check the list.");

@@ -12,8 +12,9 @@ The root URL redirects to `/api-keys`; usage reporting lives at `/usage`.
 
 ## Try the demo
 
-- Create a named key, copy the sample secret, and close the dialog. The full
-  secret is only held in the dialog; the list retains a masked value.
+- Create a named key, copy the sample secret, and choose “I’ve saved it” or
+  discard it. The full secret is only held in the dialog; the list retains a
+  safe key prefix.
 - Search keys, filter active/revoked statuses, or revoke a key after confirming.
 - Filter usage by key and by the last 7 or 30 demo days. Switch between requests
   and tokens, inspect daily values, and export the selected report as CSV.
@@ -23,7 +24,9 @@ The root URL redirects to `/api-keys`; usage reporting lives at `/usage`.
 Keys and revocations last only while the app is open; reloading restores the
 sample workspace. "Reset demo keys" also restores the initial sample keys.
 Usage is a fixed, synthetic historical dataset ending September 5, 2026. New
-keys have no recorded activity, and revoking a key preserves its history.
+keys have no recorded activity, and revoking a key preserves its history. The
+demo allows up to five active keys; revoke one before creating another. Never-used
+keys older than 24 hours are marked with removal advice.
 
 Search, status, pagination, usage metric, date range, and selected key are stored
 in URL search parameters. Demo data is local and never sent to the API.

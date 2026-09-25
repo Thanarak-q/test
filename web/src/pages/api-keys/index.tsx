@@ -1,7 +1,16 @@
 import { Dialog } from "@/components/ui/dialog";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { PageState, previewSchema } from "@/components/ui/page-state";
-import { $demoKeys, createDemoKey, formatDate, revokeDemoKey, type DemoKey } from "@/stores/demo";
+import {
+  $demoKeys,
+  createDemoKey,
+  DEMO_MAX_ACTIVE_KEYS,
+  formatDate,
+  getDemoActiveKeyCount,
+  getDemoKeyPrefix,
+  revokeDemoKey,
+  type DemoKey,
+} from "@/stores/demo";
 import { useStore } from "@nanostores/react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
@@ -19,18 +28,26 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
 export const keySearchSchema = z.object({
   q: z.string().catch("").optional(),
-  status: z.enum(["active", "revoked", "all"]).catch("active").optional(),
+  status: z.enum(["active", "revoked", "all"]).catch("all").optional(),
   page: z.coerce.number().int().min(1).max(100000).catch(1).optional(),
   preview: previewSchema,
 });
 
-const CreateKeyDialog = ({
+const SECRET_REVEAL_MS = 60_000;
+const MASKED_SECRET = "mk_demo_••••••••••••";
+
+const getNameError = (value: string) => {
+  const length = value.trim().length;
+  return length < 1 || length > 100 ? "Enter a key name between 1 and 100 characters." : "";
+};
+
+export const CreateKeyDialog = ({
   onClose,
   onCreated,
   startEmpty,
@@ -41,31 +58,151 @@ const CreateKeyDialog = ({
 }) => {
   const [name, setName] = useState("");
   const [secret, setSecret] = useState("");
+  const [createdKeyId, setCreatedKeyId] = useState("");
+  const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-  const create = (event: FormEvent<HTMLFormElement>) => {
+  const [pending, setPending] = useState(false);
+  const mounted = useRef(false);
+  const interrupted = useRef(false);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearRevealTimer = useCallback(() => {
+    if (revealTimer.current !== null) {
+      clearTimeout(revealTimer.current);
+      revealTimer.current = null;
+    }
+  }, []);
+  const clearSecret = useCallback(() => {
+    clearRevealTimer();
+    setSecret("");
+    setCreatedKeyId("");
+    setRevealed(false);
+    setCopied(false);
+    setError("");
+  }, [clearRevealTimer]);
+  useEffect(() => {
+    mounted.current = true;
+    interrupted.current = false;
+    const maskSecret = () => {
+      clearRevealTimer();
+      setRevealed(false);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") maskSecret();
+    };
+    const handlePageHide = () => {
+      interrupted.current = true;
+      clearSecret();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      mounted.current = false;
+      interrupted.current = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+      clearRevealTimer();
+    };
+  }, [clearRevealTimer, clearSecret]);
+  const closeAfterSaving = () => {
+    clearSecret();
+    onClose();
+  };
+  const reveal = () => {
+    if (!secret) return;
+    clearRevealTimer();
+    setRevealed(true);
+    revealTimer.current = setTimeout(() => {
+      setRevealed(false);
+      revealTimer.current = null;
+    }, SECRET_REVEAL_MS);
+  };
+  const hide = () => {
+    clearRevealTimer();
+    setRevealed(false);
+  };
+  const create = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (pending) return;
+    const nameError = getNameError(name);
+    if (nameError) {
+      setError(nameError);
+      return;
+    }
+    interrupted.current = false;
+    setPending(true);
+    setError("");
     try {
-      setSecret(createDemoKey(name, startEmpty));
-      setError("");
+      const createdSecret = await createDemoKey(name.trim(), startEmpty);
+      if (!mounted.current || interrupted.current) {
+        const createdKey = $demoKeys
+          .get()
+          .find((key) => key.keyPrefix === getDemoKeyPrefix(createdSecret));
+        if (createdKey) {
+          try {
+            await revokeDemoKey(createdKey.id);
+          } catch {
+            // The page is going away; there is no dialog state to recover.
+          }
+        }
+        return;
+      }
+      setSecret(createdSecret);
+      setCreatedKeyId(
+        $demoKeys.get().find((key) => key.keyPrefix === getDemoKeyPrefix(createdSecret))?.id ?? "",
+      );
+      setRevealed(false);
+      setCopied(false);
       onCreated();
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "We couldn't create the demo key. Try again.",
-      );
+      if (mounted.current && !interrupted.current) {
+        setError(
+          error instanceof Error ? error.message : "We couldn't create the demo key. Try again.",
+        );
+      }
+    } finally {
+      if (mounted.current) setPending(false);
     }
   };
   const copy = async () => {
+    if (!secret || pending) return;
+    setCopied(false);
     try {
       await navigator.clipboard.writeText(secret);
+      if (!mounted.current || interrupted.current) return;
       setCopied(true);
       setError("");
     } catch {
-      setError("Clipboard access isn't available. Select the secret below and copy it manually.");
+      if (mounted.current && !interrupted.current) {
+        setError(
+          "Clipboard access isn't available. Reveal the secret, then select it and copy it manually.",
+        );
+      }
     }
   };
+  const discard = async () => {
+    if (!createdKeyId || pending) return;
+    setPending(true);
+    setError("");
+    try {
+      await revokeDemoKey(createdKeyId);
+      if (!mounted.current) return;
+      clearSecret();
+      onClose();
+    } catch {
+      if (mounted.current && !interrupted.current)
+        setError("We couldn't revoke this key. Try again.");
+    } finally {
+      if (mounted.current) setPending(false);
+    }
+  };
+  const nameError = getNameError(name);
   return (
-    <Dialog title={secret ? "Save your secret key" : "Create new secret key"} onClose={onClose}>
+    <Dialog
+      title={secret ? "Save your secret key" : "Create new secret key"}
+      onClose={onClose}
+      dismissible={false}
+    >
       {secret ? (
         <div className="modal-body">
           <div className="success-heading">
@@ -80,22 +217,40 @@ const CreateKeyDialog = ({
             Secret key
           </label>
           <div className="secret-field">
-            <input
+            <code
               id="new-secret"
-              autoFocus
-              readOnly
-              value={secret}
-              onFocus={(event) => event.target.select()}
-            />
+              className={revealed ? "secret-value" : "secret-value masked"}
+              aria-label={revealed ? "Secret key" : "Secret key is masked"}
+              role="textbox"
+              aria-readonly="true"
+              tabIndex={revealed ? 0 : -1}
+            >
+              {revealed ? secret : MASKED_SECRET}
+            </code>
             <button
+              type="button"
+              className="button button-secondary secret-toggle"
+              onClick={revealed ? hide : reveal}
+              disabled={pending}
+              autoFocus
+            >
+              {revealed ? "Hide" : "Reveal"}
+            </button>
+            <button
+              type="button"
               className="icon-button"
               onClick={() => void copy()}
               aria-label={copied ? "Secret copied" : "Copy secret key"}
+              disabled={pending}
             >
               {copied ? <Check /> : <Copy />}
             </button>
           </div>
-          <p className="field-help">This is a demo key. It cannot access the Mathew AI API.</p>
+          <p className="field-help">
+            This is a demo key. It cannot access the Mathew AI API. Clipboard contents and
+            screenshots can expose secrets; store this key securely.
+          </p>
+          <p className="field-help">Reveal lasts 60 seconds and masks the key automatically.</p>
           {error && (
             <p className="form-error" role="alert">
               {error}
@@ -105,8 +260,22 @@ const CreateKeyDialog = ({
             <span className="copy-feedback" role="status">
               {copied ? "Copied to clipboard" : ""}
             </span>
-            <button className="button button-primary" onClick={onClose}>
-              Done
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => void discard()}
+              disabled={pending}
+              aria-busy={pending}
+            >
+              Discard key
+            </button>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={closeAfterSaving}
+              disabled={pending}
+            >
+              I've saved it
             </button>
           </div>
         </div>
@@ -124,12 +293,13 @@ const CreateKeyDialog = ({
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
-            maxLength={80}
+            maxLength={100}
             autoComplete="off"
             aria-describedby="key-name-help"
+            aria-invalid={Boolean(error && nameError)}
           />
           <p id="key-name-help" className="field-help">
-            Up to 80 characters. You can create separate keys for each application.
+            Up to 100 characters. You can create separate keys for each application.
           </p>
           <div className="inline-notice">
             <LockKeyhole />
@@ -141,10 +311,20 @@ const CreateKeyDialog = ({
             </p>
           )}
           <div className="modal-actions">
-            <button type="button" className="button button-secondary" onClick={onClose}>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={onClose}
+              disabled={pending}
+            >
               Cancel
             </button>
-            <button className="button button-primary" type="submit" disabled={!name.trim()}>
+            <button
+              className="button button-primary"
+              type="submit"
+              disabled={Boolean(nameError) || pending}
+              aria-busy={pending}
+            >
               Create secret key
             </button>
           </div>
@@ -154,8 +334,31 @@ const CreateKeyDialog = ({
   );
 };
 
-const RevokeKeyDialog = ({ entry, onClose }: { entry: DemoKey; onClose: () => void }) => {
+export const RevokeKeyDialog = ({ entry, onClose }: { entry: DemoKey; onClose: () => void }) => {
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const revoke = async () => {
+    if (pending) return;
+    setPending(true);
+    setError("");
+    try {
+      await revokeDemoKey(entry.id);
+      if (!mounted.current) return;
+      toast.success(`“${entry.name}” revoked`);
+      onClose();
+    } catch {
+      if (mounted.current) setError("We couldn't revoke this key. Try again.");
+    } finally {
+      if (mounted.current) setPending(false);
+    }
+  };
   return (
     <Dialog title="Revoke API key?" onClose={onClose}>
       <div className="modal-body">
@@ -163,7 +366,7 @@ const RevokeKeyDialog = ({ entry, onClose }: { entry: DemoKey; onClose: () => vo
           <KeyRound />
           <div>
             <strong>{entry.name}</strong>
-            <code>{entry.masked}</code>
+            <code>{entry.keyPrefix}</code>
           </div>
         </div>
         <p>
@@ -180,22 +383,20 @@ const RevokeKeyDialog = ({ entry, onClose }: { entry: DemoKey; onClose: () => vo
           </p>
         )}
         <div className="modal-actions">
-          <button className="button button-secondary" onClick={onClose}>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={onClose}
+            disabled={pending}
+          >
             Keep key
           </button>
           <button
+            type="button"
             className="button button-danger"
-            onClick={() => {
-              try {
-                revokeDemoKey(entry.id);
-                toast.success(`“${entry.name}” revoked`);
-                onClose();
-              } catch (error) {
-                setError(
-                  error instanceof Error ? error.message : "Couldn't revoke this key. Try again.",
-                );
-              }
-            }}
+            onClick={() => void revoke()}
+            disabled={pending}
+            aria-busy={pending}
           >
             Revoke key
           </button>
@@ -212,13 +413,16 @@ export const ApiKeysPage = () => {
   const [creating, setCreating] = useState(false);
   const [revoking, setRevoking] = useState<DemoKey | null>(null);
   const query = search.q ?? "";
-  const status = search.status ?? "active";
+  const status = search.status ?? "all";
   const blocked = ["error", "loading", "session"].includes(search.preview ?? "");
   const visibleKeys = search.preview === "empty" ? [] : keys;
+  const activeCount = getDemoActiveKeyCount();
+  const atLimit = activeCount >= DEMO_MAX_ACTIVE_KEYS;
+  const createDisabled = blocked || atLimit;
   const filtered = visibleKeys.filter(
     (key) =>
       (status === "all" || key.status === status) &&
-      `${key.name} ${key.masked}`.toLowerCase().includes(query.trim().toLowerCase()),
+      `${key.name} ${key.keyPrefix}`.toLowerCase().includes(query.trim().toLowerCase()),
   );
   const totalPages = Math.max(1, Math.ceil(filtered.length / 10));
   const page = Math.min(search.page ?? 1, totalPages);
@@ -240,7 +444,9 @@ export const ApiKeysPage = () => {
           <button
             className="button button-primary"
             onClick={() => setCreating(true)}
-            disabled={blocked}
+            disabled={createDisabled}
+            aria-describedby={atLimit ? "key-limit-help" : undefined}
+            title={atLimit ? "Revoke a key before creating another" : undefined}
           >
             <Plus />
             <span>Create new secret key</span>
@@ -302,6 +508,14 @@ export const ApiKeysPage = () => {
           <span className="result-count" role="status">
             {blocked ? "" : `${filtered.length} ${filtered.length === 1 ? "key" : "keys"}`}
           </span>
+          <span className="key-capacity" title="Active key capacity">
+            {activeCount} / {DEMO_MAX_ACTIVE_KEYS} keys
+          </span>
+          {atLimit && (
+            <span id="key-limit-help" className="key-limit-help">
+              Revoke a key before creating another.
+            </span>
+          )}
         </div>
         {blocked ? (
           <PageState
@@ -312,7 +526,7 @@ export const ApiKeysPage = () => {
           <>
             <p id="key-scroll-hint" className="table-scroll-hint">
               <MoveHorizontal />
-              Scroll horizontally for status, dates, and key actions.
+              Scroll horizontally for status and key actions.
             </p>
             <div
               className="table-scroll"
@@ -325,9 +539,8 @@ export const ApiKeysPage = () => {
                 <thead>
                   <tr>
                     <th scope="col">Name</th>
-                    <th scope="col">Secret key</th>
+                    <th scope="col">Key</th>
                     <th scope="col">Status</th>
-                    <th scope="col">Created</th>
                     <th scope="col">Last used</th>
                     <th scope="col">
                       <span className="sr-only">Actions</span>
@@ -336,14 +549,17 @@ export const ApiKeysPage = () => {
                 </thead>
                 <tbody>
                   {rows.map((key) => (
-                    <tr key={key.id}>
+                    <tr
+                      key={key.id}
+                      className={key.status === "revoked" ? "revoked-row" : undefined}
+                    >
                       <td>
                         <span className="key-name" title={key.name}>
                           {key.name}
                         </span>
                       </td>
                       <td>
-                        <code className="masked-key">{key.masked}</code>
+                        <code className="key-prefix">{key.keyPrefix}</code>
                       </td>
                       <td>
                         <span className={`status-badge ${key.status}`}>
@@ -351,9 +567,19 @@ export const ApiKeysPage = () => {
                           {key.status === "active" ? "Active" : "Revoked"}
                         </span>
                       </td>
-                      <td className="muted nowrap">{formatDate(key.createdAt)}</td>
                       <td className="muted nowrap">
-                        {key.lastUsed ? formatDate(key.lastUsed) : "Never"}
+                        {key.neverUsed ? (
+                          <span className="never-used-cell">
+                            <span className="never-used-badge">Never used</span>
+                            {key.recommendRevoke && (
+                              <span className="never-used-advice">Consider removing this key.</span>
+                            )}
+                          </span>
+                        ) : key.lastUsed ? (
+                          formatDate(key.lastUsed)
+                        ) : (
+                          "Never"
+                        )}
                       </td>
                       <td>
                         <div className="row-actions">
@@ -435,10 +661,18 @@ export const ApiKeysPage = () => {
                 Clear filters
               </button>
             ) : (
-              <button className="button button-primary" onClick={() => setCreating(true)}>
+              <button
+                className="button button-primary"
+                onClick={() => setCreating(true)}
+                disabled={atLimit}
+                aria-describedby={atLimit ? "key-limit-help" : undefined}
+              >
                 <Plus />
                 Create new secret key
               </button>
+            )}
+            {atLimit && !query && !visibleKeys.length && (
+              <p className="empty-state-help">Revoke a key before creating another.</p>
             )}
           </div>
         )}
@@ -447,7 +681,14 @@ export const ApiKeysPage = () => {
         <CreateKeyDialog
           startEmpty={search.preview === "empty"}
           onClose={() => setCreating(false)}
-          onCreated={() => void navigate({ search: { status: "active" } })}
+          onCreated={() =>
+            void navigate({
+              search: (prev) => ({
+                ...prev,
+                preview: prev.preview === "empty" ? undefined : prev.preview,
+              }),
+            })
+          }
         />
       )}
       {revoking && <RevokeKeyDialog entry={revoking} onClose={() => setRevoking(null)} />}

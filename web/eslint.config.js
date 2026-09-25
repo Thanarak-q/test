@@ -27,6 +27,65 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
+  {
+    files: [
+      "src/pages/api-keys/**/*.{ts,tsx}",
+      "src/stores/demo.ts",
+      "src/components/ui/dialog.tsx",
+    ],
+    rules: {
+      "no-restricted-globals": ["error", "localStorage", "sessionStorage", "indexedDB"],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@nanostores/persistent",
+              message: "API key management must not persist secrets or key state.",
+            },
+          ],
+        },
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "document",
+          property: "cookie",
+          message: "API key management must not use document.cookie.",
+        },
+        {
+          object: "window",
+          property: "localStorage",
+          message: "API key management must not use browser storage.",
+        },
+        {
+          object: "window",
+          property: "sessionStorage",
+          message: "API key management must not use browser storage.",
+        },
+        {
+          object: "window",
+          property: "indexedDB",
+          message: "API key management must not use browser storage.",
+        },
+        {
+          object: "globalThis",
+          property: "localStorage",
+          message: "API key management must not use browser storage.",
+        },
+        {
+          object: "globalThis",
+          property: "sessionStorage",
+          message: "API key management must not use browser storage.",
+        },
+        {
+          object: "globalThis",
+          property: "indexedDB",
+          message: "API key management must not use browser storage.",
+        },
+      ],
+    },
+  },
   { files: ["src/components/ui/**"], rules: { "func-style": "off" } },
   prettier,
 );

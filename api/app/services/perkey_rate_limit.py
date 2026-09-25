@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
+from app.constants.llm import POLICY_CAP
 from app.constants.perkey_rate_limit import (
     MAX_INPUT_TOKENS,
     RATE_LIMIT_CAPACITY,
@@ -16,6 +17,9 @@ from app.constants.perkey_rate_limit import (
     TOKEN_RATE_LIMIT_REFILL_PER_MIN,
 )
 from app.envelope import AppError
+
+# The most one request can cost: a full prompt plus the largest reply.
+MAX_REQUEST_COST = MAX_INPUT_TOKENS + POLICY_CAP
 
 LimitType = Literal["requests", "tokens"]
 
@@ -119,7 +123,7 @@ class PerKeyRateLimitResult:
 
 
 def check_token_bucket_fits_largest_request(
-    max_cost: int = MAX_INPUT_TOKENS, capacity: int = TOKEN_RATE_LIMIT_CAPACITY
+    max_cost: int = MAX_REQUEST_COST, capacity: int = TOKEN_RATE_LIMIT_CAPACITY
 ) -> None:
     """Refuse to start if one allowed request could cost more than a full bucket.
 
@@ -129,7 +133,8 @@ def check_token_bucket_fits_largest_request(
     """
     if max_cost > capacity:
         raise RuntimeError(
-            f"MAX_INPUT_TOKENS ({max_cost}) exceeds TOKEN_RATE_LIMIT_CAPACITY "
+            f"The largest request ({max_cost} tokens) exceeds "
+            f"TOKEN_RATE_LIMIT_CAPACITY "
             f"({capacity}); such a request would be rate limited forever."
         )
 
@@ -153,10 +158,12 @@ async def perkey_rate_limit(
     _require_positive_int(user_id, "user_id")
     _require_positive_int(est_tokens, "est_tokens")
 
-    if est_tokens > MAX_INPUT_TOKENS:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Request exceeds the {MAX_INPUT_TOKENS} token limit.",
+    if est_tokens > MAX_REQUEST_COST:
+        # Before touching either bucket: no request this large can succeed.
+        raise AppError(
+            "llm_input_too_large",
+            f"The prompt is over the {MAX_INPUT_TOKENS}-token input limit.",
+            413,
         )
 
     try:

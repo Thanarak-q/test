@@ -72,8 +72,11 @@ async def create_api_key(
     request: Request,
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(get_unbegun_session),
+    redis: Redis = Depends(get_redis),
 ) -> CreatedKeyResponse:
-    created = await api_keys.create_key(session, _context(request, user_id), body.name)
+    created = await api_keys.create_key(
+        session, redis, _context(request, user_id), body.name
+    )
     return CreatedKeyResponse(
         id=created.id,
         name=created.name,
@@ -87,6 +90,7 @@ async def create_api_key(
 async def list_api_keys(
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(get_unbegun_session),
+    redis: Redis = Depends(get_redis),
 ) -> list[KeySummaryResponse]:
     return [
         KeySummaryResponse(
@@ -98,7 +102,7 @@ async def list_api_keys(
             last_used_at=key.last_used_at,
             never_used=key.never_used,
         )
-        for key in await api_keys.list_keys(session, user_id)
+        for key in await api_keys.list_keys(session, redis, user_id)
     ]
 
 

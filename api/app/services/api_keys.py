@@ -28,6 +28,7 @@ from app.constants.api_keys import (
 from app.envelope import AppError
 from app.repos import api_key_repo, audit_repo
 from app.repos.auth_cache import RedisAuthCache
+from app.services.mgmt_rate_limit import mgmt_rate_limit
 from app.services.validate_api_key import AuthInfrastructureError
 
 logger = logging.getLogger(__name__)
@@ -71,8 +72,9 @@ def key_prefix(key_id: str) -> str:
 
 
 async def create_key(
-    session: AsyncSession, ctx: RequestContext, name: str
+    session: AsyncSession, redis: Redis, ctx: RequestContext, name: str
 ) -> CreatedKey:
+    await mgmt_rate_limit(redis, user_id=ctx.user_id, kind="write")
     key_id = _new_ulid()
     # secret stays a local: it is never attached to an ORM object, logged,
     # cached, or stored. Only its hash leaves this function besides the
@@ -113,7 +115,10 @@ async def create_key(
     )
 
 
-async def list_keys(session: AsyncSession, user_id: int) -> list[KeySummary]:
+async def list_keys(
+    session: AsyncSession, redis: Redis, user_id: int
+) -> list[KeySummary]:
+    await mgmt_rate_limit(redis, user_id=user_id, kind="read")
     async with session.begin():
         rows = await api_key_repo.list_for_user(session, user_id=user_id)
     return [
@@ -141,6 +146,7 @@ async def labels(
 async def revoke_key(
     session: AsyncSession, redis: Redis, ctx: RequestContext, key_id: str
 ) -> None:
+    await mgmt_rate_limit(redis, user_id=ctx.user_id, kind="write")
     now = datetime.now(UTC)
     async with session.begin():
         if await api_key_repo.revoke(
@@ -164,6 +170,7 @@ async def revoke_key(
 async def delete_key(
     session: AsyncSession, redis: Redis, ctx: RequestContext, key_id: str
 ) -> None:
+    await mgmt_rate_limit(redis, user_id=ctx.user_id, kind="write")
     now = datetime.now(UTC)
     async with session.begin():
         if await api_key_repo.soft_delete(

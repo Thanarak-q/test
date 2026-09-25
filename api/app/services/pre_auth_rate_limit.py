@@ -12,9 +12,10 @@ BUCKET_TTL_SECONDS = 300  # no incoming request from that ip for 5 mins -> delet
 
 RATE_LIMIT_UNAVAILABLE_MESSAGE = "Rate limiting is temporarily unavailable."
 
+# Shared token bucket (also used by mgmt_rate_limit).
 # KEYS[1]=bucket  ARGV: capacity, refill_per_second, ttl, cost
 # cost=1 consumes a token; cost=-1 returns one (never above capacity)
-_BUCKET_LUA = """
+TOKEN_BUCKET_LUA = """
 local capacity = tonumber(ARGV[1])
 local refill_per_second = tonumber(ARGV[2])
 local ttl = tonumber(ARGV[3])
@@ -77,7 +78,7 @@ async def check_pre_auth_rate_limit(redis: Redis, ip: str) -> RateLimitResult:
     """
     try:
         allowed, remaining, retry_after, reset = await redis.eval(
-            _BUCKET_LUA,
+            TOKEN_BUCKET_LUA,
             1,  # redis key amount
             bucket_key(ip),
             CAPACITY,  # ARGV[1]
@@ -125,7 +126,7 @@ async def refund_pre_auth_token(redis: Redis, ip: str) -> None:
     """
     try:
         await redis.eval(
-            _BUCKET_LUA,
+            TOKEN_BUCKET_LUA,
             1,
             bucket_key(ip),
             CAPACITY,

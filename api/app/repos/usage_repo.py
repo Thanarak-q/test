@@ -1,9 +1,7 @@
-"""Read side of llm_usage_logs and llm_quotas, plus usage retention.
+"""llm_usage_logs — tokens charged against quota, per request.
 
-TODO(chat-pipeline): the chat pipeline owns these tables and writes them.
-The columns read here (source, key_id, total_tokens, created_at; token_limit,
-token_used) are the shape proposed in the phase 1 migration — confirm with the
-pipeline owner.
+Written after quota_reconcile; read by the dashboard. Metadata only: no
+model, no source IP, no content.
 """
 
 from dataclasses import dataclass
@@ -24,12 +22,6 @@ class HourlyUsage:
     tokens: int
 
 
-@dataclass(frozen=True)
-class QuotaRow:
-    token_limit: int
-    token_used: int
-
-
 _utc = UtcDateTime()
 
 # Grouped by UTC hour rather than date, so the caller can bucket into the
@@ -41,7 +33,7 @@ _HOURLY_FOR_USER = text(
            source,
            key_id,
            COUNT(*) AS requests,
-           COALESCE(SUM(total_tokens), 0) AS tokens
+           COALESCE(SUM(tokens), 0) AS tokens
     FROM llm_usage_logs
     WHERE user_id = :user_id
       AND created_at >= :start
@@ -83,21 +75,34 @@ async def hourly_for_user(
     ]
 
 
-_GET_QUOTA = text(
+_RECORD = text(
     """
-    SELECT token_limit, token_used FROM llm_quotas
-    WHERE user_id = :user_id
+    INSERT INTO llm_usage_logs (user_id, source, key_id, tokens, request_id, created_at)
+    VALUES (:user_id, :source, :key_id, :tokens, :request_id, :at)
     """
-)
+).bindparams(bindparam("at", type_=_utc))
 
 
-async def get_quota(session: AsyncSession, *, user_id: int) -> QuotaRow | None:
-    """The user's quota as settled in MySQL, or None if no row yet."""
-    row = (await session.execute(_GET_QUOTA, {"user_id": user_id})).mappings().first()
-    return (
-        QuotaRow(token_limit=int(row["token_limit"]), token_used=int(row["token_used"]))
-        if row
-        else None
+async def record(
+    session: AsyncSession,
+    *,
+    user_id: int,
+    source: str,
+    key_id: str | None,
+    tokens: int,
+    request_id: str | None,
+    at: datetime,
+) -> None:
+    await session.execute(
+        _RECORD,
+        {
+            "user_id": user_id,
+            "source": source,
+            "key_id": key_id,
+            "tokens": tokens,
+            "request_id": request_id,
+            "at": at,
+        },
     )
 
 

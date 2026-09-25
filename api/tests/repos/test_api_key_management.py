@@ -15,6 +15,7 @@ from app.main import app
 from app.models import ApiKey, ApiKeyAuditLog
 from app.repos.auth_cache import RedisAuthCache
 from app.repos.auth_database import SqlAuthDatabase, SqlFailureAudit
+from app.services.mgmt_rate_limit import bucket_key
 from app.services.validate_api_key import positive_cache_key, validate_api_key
 from tests.repos.helpers import ALICE, BOB, as_user
 
@@ -144,9 +145,14 @@ async def test_create_validates_the_name(client, name):
     assert response.status_code == 422
 
 
-async def test_ten_concurrent_creates_at_four_of_five_allow_exactly_one(client, db):
+async def test_ten_concurrent_creates_at_four_of_five_allow_exactly_one(
+    client, db, redis
+):
     for index in range(MAX_KEYS - 1):
         await create(client, ALICE, f"existing {index}")
+    # The race is about the key limit, not the write rate limit: start the
+    # ten from a full bucket.
+    await redis.delete(bucket_key(ALICE, "write"))
 
     responses = await asyncio.gather(
         *(create(client, ALICE, f"race {index}") for index in range(10))
@@ -299,6 +305,35 @@ async def test_unauthenticated_calls_are_401(client):
     response = await client.post("/v1/api-keys/list")
 
     assert response.status_code == 401
+
+
+# endregion
+
+
+# region Management rate limit
+
+
+async def test_writes_are_rate_limited_per_user(client):
+    for _ in range(10):  # WRITE_CAPACITY
+        await client.post(
+            "/v1/api-keys/revoke",
+            json={"id": "01ARZ3NDEKTSV4RRFFQ69G5FAV"},
+            headers=as_user(ALICE),
+        )
+
+    limited = await client.post(
+        "/v1/api-keys/revoke",
+        json={"id": "01ARZ3NDEKTSV4RRFFQ69G5FAV"},
+        headers=as_user(ALICE),
+    )
+    other_user = await create(client, BOB)
+    reads = await client.post("/v1/api-keys/list", headers=as_user(ALICE))
+
+    assert limited.status_code == 429
+    assert limited.json()["error"]["code"] == "identity_rate_limit_exceeded"
+    assert int(limited.headers["Retry-After"]) >= 1
+    assert other_user.status_code == 200  # per user, not global
+    assert reads.status_code == 200  # reads have their own, larger bucket
 
 
 # endregion

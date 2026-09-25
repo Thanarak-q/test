@@ -10,7 +10,6 @@ from datetime import datetime
 from sqlalchemy import (
     CHAR,
     BigInteger,
-    Boolean,
     CheckConstraint,
     ForeignKey,
     Index,
@@ -27,7 +26,8 @@ __all__ = [
     "AuthFailureLog",
     "Base",
     "LlmModel",
-    "LlmQuota",
+    "LlmModelAuditLog",
+    "LlmProviderCallLog",
     "LlmUsageLog",
     "User",
 ]
@@ -121,34 +121,54 @@ class AuthFailureLog(Base):
     created_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
 
 
-# region llm — TODO(chat-pipeline): shape agreed provisionally; confirm with the
-# chat pipeline owner before this migration runs anywhere shared.
+# region llm
 class LlmModel(Base):
+    """The model whitelist. Only `status = 'enabled'` models can be called."""
+
     __tablename__ = "llm_models"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('enabled', 'disabled')", name="ck_llm_models_status"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Matched exactly — never by prefix, substring or fuzzily.
     name: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     # The model's total window. Deliberately not called max_tokens: in a chat
     # request max_tokens is the output cap, and sharing the name invites
     # setting the output cap to the whole window.
     context_window: Mapped[int] = mapped_column(Integer, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="1")
+    # The most this model may be asked to write in one reply.
+    max_output_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(10), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(nullable=False)
 
 
-class LlmQuota(Base):
-    __tablename__ = "llm_quotas"
+class LlmModelAuditLog(Base):
+    """Admin changes to the model whitelist. Append-only."""
 
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("identity_users.id"), primary_key=True, autoincrement=False
-    )
-    token_limit: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    token_used: Mapped[int] = mapped_column(
-        BigInteger, nullable=False, server_default="0"
-    )
+    __tablename__ = "llm_model_audit_logs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    actor_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    actor_type: Mapped[str] = mapped_column(String(16), nullable=False)  # admin
+    action: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # model.enabled | model.disabled
+    target_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    request_id: Mapped[str | None] = mapped_column(String(64))
+    source_ip: Mapped[str | None] = mapped_column(String(45))
+    created_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
 
 
 class LlmUsageLog(Base):
-    """Append-only. Retained USAGE_RETENTION_DAYS (app/constants/retention.py)."""
+    """Tokens charged against quota. Append-only, retained USAGE_RETENTION_DAYS.
+
+    Deliberately thin: no model, no source IP, no content — just what the
+    quota was charged, for whom, and from where. Provider-call detail lives
+    in llm_provider_call_logs.
+    """
 
     __tablename__ = "llm_usage_logs"
     __table_args__ = (
@@ -164,13 +184,35 @@ class LlmUsageLog(Base):
     source: Mapped[str] = mapped_column(String(8), nullable=False)
     # Null for web usage. No FK: usage outlives the key it was billed to.
     key_id: Mapped[str | None] = mapped_column(String(26), index=True)
-    model: Mapped[str] = mapped_column(String(64), nullable=False)
-    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
-    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
-    total_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
-    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    tokens: Mapped[int] = mapped_column(Integer, nullable=False)
+    request_id: Mapped[str | None] = mapped_column(String(64), index=True)
     # (user_id, created_at) serves the dashboard; this one serves retention,
     # which deletes by age across all users.
+    created_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
+
+
+class LlmProviderCallLog(Base):
+    """One row per provider call, successful or not. Metadata only — never
+    prompt or response content. Append-only, retained USAGE_RETENTION_DAYS."""
+
+    __tablename__ = "llm_provider_call_logs"
+    __table_args__ = (
+        Index("ix_llm_provider_call_logs_user_id_created_at", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("identity_users.id"), nullable=False
+    )
+    key_id: Mapped[str] = mapped_column(String(26), nullable=False)
+    request_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    model_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    # ok | timeout | provider_error | rate_limited | bad_response | too_large
+    # | replayed | rejected
+    outcome: Mapped[str] = mapped_column(String(32), nullable=False)
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer)
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(nullable=False, index=True)
 
 

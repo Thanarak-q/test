@@ -39,7 +39,8 @@ app/repos/
   usage_repo.py       llm_usage_logs, llm_quotas (read side)
   auth_cache.py       Redis side of key validation
   auth_database.py    adapters that give validate_api_key its own short sessions
-  model_repo.py       (arrives with the chat pipeline — llm_models)
+  model_repo.py       llm_models (the whitelist)
+  provider_call_repo.py llm_provider_call_logs
 ```
 
 One module per table or aggregate. Services import repo modules; routers import
@@ -150,8 +151,7 @@ a second user's id returns nothing.
   the caller is known — the key record is where `user_id` comes from); the adapters in
   `auth_database.py` open their own short transactions (see its docstring). The repo
   functions themselves never commit.
-- Still open: the five chat-pipeline files under `api/app/` are empty placeholders
-  owned by that work; `model_repo.py` arrives with it.
+- No empty placeholders remain under `api/app/`.
 
 ---
 
@@ -190,11 +190,12 @@ which can take tens of seconds. Everything below follows from that.
   its own short session and releases it before the handler runs; retention runs as
   `python -m app.jobs.retention` in batches, with `created_at` indexes on every log
   table.
-- Still open (chat pipeline): `get_session` holds one connection for a whole request,
-  so the chat route must split its reads and writes around the provider call — noted
-  as `TODO(chat-pipeline)` in `db.py`. Capping concurrent outbound calls also belongs
-  there. The retention job needs a cron entry and its own DB user
-  (`docs/DB_PERMISSIONS.md`).
+- Met (chat pipeline): the chat route never uses `get_session`; each read and write
+  opens its own short session, and none is open during the provider call. Outbound
+  calls are capped at 50 in flight per process (503 past that, never a queue). The
+  model list is cached in Redis (`model:enabled`, 300s).
+- Still open: the retention and quota-health jobs need cron entries and their own DB
+  user (`docs/DB_PERMISSIONS.md`).
 
 ---
 
@@ -244,7 +245,10 @@ the cheaper failure.
   everywhere; Redis has 1s connect and socket timeouts, MySQL 2s connect and 2s pool
   timeouts, and the auth lookup a 2s query budget; failed cache invalidation on revoke
   is a 500.
-- Still open (chat pipeline): provider timeouts (connect 5s, read 120s), releasing the
-  quota reservation in `finally`, and the long-held session from 2.3 — still the
-  largest availability risk, because it is the path by which a slow provider degrades
-  the main application.
+- Met (chat pipeline): provider timeouts are connect 5s / read 120s, a timeout is
+  503; the quota reservation is released in `finally` on every path that does not
+  settle it (tested by removing the release: ten tests fail); the provider call log is
+  written in `finally` too.
+- Known limitation, recorded rather than overlooked: no circuit breaker yet. The
+  timeout and the concurrency cap already keep a slow provider from taking the
+  workers; revisit with real traffic metrics.

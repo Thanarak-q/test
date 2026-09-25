@@ -32,7 +32,8 @@ _TABLES = (
     "identity_auth_failure_logs",
     "identity_api_keys",
     "llm_usage_logs",
-    "llm_quotas",
+    "llm_provider_call_logs",
+    "llm_model_audit_logs",
     "identity_users",
 )
 
@@ -99,6 +100,18 @@ async def db(_migrated_database):
         await session.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
         for table in _TABLES:
             await session.execute(text(f"TRUNCATE TABLE {table}"))
+        # The migration seeds the whitelist; tests may disable models or add
+        # their own, so put it back to exactly the seed.
+        await session.execute(text("DELETE FROM llm_models WHERE id > 2"))
+        await session.execute(
+            text(
+                "UPDATE llm_models SET status = 'enabled', "
+                "context_window = CASE name WHEN 'gpt-4o' THEN 128000 "
+                "ELSE 1047576 END, "
+                "max_output_tokens = CASE name WHEN 'gpt-4o' THEN 16384 "
+                "ELSE 32768 END"
+            )
+        )
         await session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
     yield SessionLocal
     await engine.dispose()

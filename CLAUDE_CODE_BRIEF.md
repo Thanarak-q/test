@@ -229,9 +229,8 @@ WHERE id=:id AND user_id=:u AND status != 'deleted'`
 ## Open questions — ask, do not guess
 
 1. How does the main application's session work? (blocks Phase 3–6)
-2. Quota design: `DECISIONS.md` says Redis `INCRBY` counter re-seeded from MySQL; the
-   design doc says a sorted set of reservations with TTL. Which one? (owned by the chat
-   pipeline — confirm with its owner)
+2. ~~Quota design~~ — answered: a sorted set of reservations beside the main app's
+   `quota:{user_id}` hash (`docs/planning/chat_pipeline.md`).
 3. Does the main application update quota with an atomic increment or read-modify-write?
    If the latter, concurrent updates from both systems lose deductions.
 4. Does nginx set `proxy_set_header X-Real-IP $remote_addr` and

@@ -53,3 +53,8 @@ async def get_current_user(
 ) -> int:
     """The verified dashboard user's id, or 401."""
     return principal.user_id
+
+
+async def get_llm_http(request: Request):
+    """The shared provider HTTP client, created in main.py's lifespan."""
+    return request.app.state.llm_http

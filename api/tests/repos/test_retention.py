@@ -23,11 +23,7 @@ async def test_deletes_only_rows_past_each_window_in_batches(db):
                     user_id=ALICE,
                     source="api",
                     key_id=key_id,
-                    model="m",
-                    prompt_tokens=1,
-                    completion_tokens=1,
-                    total_tokens=2,
-                    latency_ms=1,
+                    tokens=2,
                     created_at=NOW - timedelta(days=days),
                 )
             )
@@ -58,7 +54,50 @@ async def test_deletes_only_rows_past_each_window_in_batches(db):
         "llm_usage_logs": 3,
         "identity_api_key_audit_logs": 1,
         "identity_auth_failure_logs": 1,
+        "llm_provider_call_logs": 0,
+        "identity_api_keys (deleted)": 0,
     }
     assert await _count(db, LlmUsageLog) == 1
     assert await _count(db, ApiKeyAuditLog) == 1
     assert await _count(db, AuthFailureLog) == 1
+
+
+async def test_purges_deleted_keys_and_provider_logs_past_their_windows(db):
+    from sqlalchemy import update
+
+    from app.models import ApiKey, LlmProviderCallLog
+
+    old_key, _ = await seed_key(db, user_id=ALICE, status="deleted")
+    recent_key, _ = await seed_key(db, user_id=ALICE, status="deleted")
+    live_key, _ = await seed_key(db, user_id=ALICE)
+    async with db.begin() as session:
+        await session.execute(
+            update(ApiKey)
+            .where(ApiKey.id == old_key)
+            .values(deleted_at=NOW - timedelta(days=91))
+        )
+        await session.execute(
+            update(ApiKey)
+            .where(ApiKey.id == recent_key)
+            .values(deleted_at=NOW - timedelta(days=89))
+        )
+        for days in (59, 61):
+            await session.execute(
+                insert(LlmProviderCallLog).values(
+                    user_id=ALICE,
+                    key_id=live_key,
+                    request_id=f"r{days}",
+                    model_id=1,
+                    outcome="ok",
+                    latency_ms=1,
+                    created_at=NOW - timedelta(days=days),
+                )
+            )
+
+    deleted = await run_retention(db, now=NOW)
+
+    assert deleted["identity_api_keys (deleted)"] == 1
+    assert deleted["llm_provider_call_logs"] == 1
+    async with db() as session:
+        remaining = set((await session.scalars(select(ApiKey.id))).all())
+    assert remaining == {recent_key, live_key}

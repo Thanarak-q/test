@@ -10,10 +10,10 @@ from sqlalchemy.types import TypeDecorator
 from app.config import settings
 from app.constants.infra import DB_CONNECT_TIMEOUT_SECONDS, DB_POOL_TIMEOUT_SECONDS
 
-# TODO(chat-pipeline): docs/NON_FUNCTIONAL.md §2.2 — never hold a pooled
-# connection during the provider call. get_session keeps one for the whole
-# request, so a chat route must not depend on it across the call: read,
-# release, call the provider, then open a new session for the writes.
+# docs/NON_FUNCTIONAL.md §2.2 — never hold a pooled connection during the
+# provider call. get_session keeps one for the whole request, so the chat
+# route does not use it: every read and write there opens its own short
+# session from SessionLocal, and none is open while the provider is called.
 # pool_timeout keeps an exhausted pool a fast 503 rather than a queue.
 engine = create_async_engine(
     settings.database_url,

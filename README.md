@@ -41,6 +41,16 @@ skip; set `REQUIRE_INFRA=1` (CI) to make a missing service a failure instead.
 which also refuses to build while the docs still contain placeholder values
 (`web/src/content/docs/values.ts`).
 
+## Scheduled jobs (cron)
+
+```bash
+uv run --directory api python -m app.jobs.retention     # daily: delete logs past retention
+uv run --directory api python -m app.jobs.quota_health  # every few minutes: alert if the main
+                                                         # app's quota:{user_id} changes shape
+```
+
+Both log `ALERT` lines on problems; `quota_health` also exits 1. Route both to alerting.
+
 ## Regenerating the web API client
 
 ```bash

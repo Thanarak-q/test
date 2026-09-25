@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import insert, select
 
-from app.models import ApiKey, LlmQuota, LlmUsageLog
+from app.models import ApiKey, LlmUsageLog
 from app.repos import api_key_repo, usage_repo
 from tests.repos.helpers import ALICE, BOB, seed_key
 
@@ -94,7 +94,7 @@ async def test_insert_limit_counts_only_the_users_own_keys(db):
     assert inserted is True  # Alice's five do not count against Bob
 
 
-async def test_hourly_usage_and_quota(db):
+async def test_hourly_usage(db):
     key_id = await _alice_key(db)
     async with db.begin() as session:
         await session.execute(
@@ -102,16 +102,9 @@ async def test_hourly_usage_and_quota(db):
                 user_id=ALICE,
                 source="api",
                 key_id=key_id,
-                model="m",
-                prompt_tokens=1,
-                completion_tokens=1,
-                total_tokens=2,
-                latency_ms=1,
+                tokens=2,
                 created_at=NOW,
             )
-        )
-        await session.execute(
-            insert(LlmQuota).values(user_id=ALICE, token_limit=10, token_used=5)
         )
 
     async with db() as session:
@@ -122,7 +115,6 @@ async def test_hourly_usage_and_quota(db):
             end=datetime(2026, 10, 1, tzinfo=UTC),
             key_id=key_id,
         )
-        quota = await usage_repo.get_quota(session, user_id=BOB)
         own = await usage_repo.hourly_for_user(
             session,
             user_id=ALICE,
@@ -131,5 +123,5 @@ async def test_hourly_usage_and_quota(db):
             key_id=None,
         )
 
-    assert usage == [] and quota is None
+    assert usage == []
     assert [(row.hour, row.requests, row.tokens) for row in own] == [(NOW, 1, 2)]

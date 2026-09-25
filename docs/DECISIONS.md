@@ -240,6 +240,42 @@ embeddings and models are all served by the chat pipeline, none of which exists 
 `rate_limit_exceeded_tokens`). If the chat pipeline returns OpenAI-shaped errors for SDK
 compatibility, the Errors page and chat reference change with it.
 
+## 2026-09-25 — chat pipeline (`docs/planning/chat_pipeline.md`)
+
+**The chat pipeline is built here after all.** The brief kept its five files for
+another developer; that work was handed back, and this implements the spec as given.
+
+**Quota lives in the main application's Redis hash, not MySQL.** Supersedes the
+2026-09-05 "Redis holds the counter, MySQL holds the truth" entry and open question
+2: `quota:{user_id}` (`limit`, `used`) is the main app's; our in-flight reservations
+are a sorted set beside it, summed live, so nothing is left behind by a crash.
+`llm_quotas` is dropped. Open question 3 still stands: the main app must update
+`used` with HINCRBY, or our increments are overwritten.
+
+**The chat reply is not wrapped in the envelope.** The one exception to AGENTS.md's
+envelope rule: OpenAI SDKs cannot read `{success, data}`. Errors still use the
+envelope — the SDKs read `error.message` from it. `tests/test_main.py` allows exactly
+this one unwrapped route.
+
+**Proof objects instead of ids.** `ValidatedModel` and `Reservation` can only be built
+by `model_validate` and `quota_reserve` (a module-private token checked in
+`__post_init__`), so `proxy_to_llm` cannot be reached by a path that skipped them.
+
+**model_validate reads MySQL when Redis is down.** The one deliberate fail-open in
+the chain, as specified: a tiny primary-key read. The request still needs Redis for
+the rate limit and quota a moment later, so it 503s there anyway.
+
+**Estimates use UTF-8 bytes / 4.** Characters / 4 undercounts Thai badly (three bytes
+per character, about a token per character); bytes / 4 stays on the high side for
+Thai and is right for English.
+
+**The per-key 413 ceiling is input limit + output cap.** The estimate now includes
+the output cap, so the old `est > MAX_INPUT_TOKENS` check would have refused valid
+requests. Startup still checks the token bucket can hold the largest request.
+
+**Alembic keeps existing loggers.** `fileConfig` disabled every app logger when
+migrations ran in-process, silencing ALERT lines; `disable_existing_loggers=False`.
+
 ## Out of scope until asked
 
 - Multi-user, workspaces, invitations. `user_id` columns exist so adding it later is a

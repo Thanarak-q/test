@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime
 import pytest
 from sqlalchemy import insert
 
-from app.models import LlmQuota, LlmUsageLog
+from app.models import LlmUsageLog
 from app.services import dashboard
 from tests.repos.helpers import ALICE, BOB, as_user, seed_key
 
@@ -24,11 +24,7 @@ async def log(db, *, user_id, at, source="api", key_id=None, tokens=100):
                 user_id=user_id,
                 source=source,
                 key_id=key_id,
-                model="gpt-4o",
-                prompt_tokens=tokens // 2,
-                completion_tokens=tokens - tokens // 2,
-                total_tokens=tokens,
-                latency_ms=10,
+                tokens=tokens,
                 created_at=at,
             )
         )
@@ -123,13 +119,10 @@ async def test_range_is_clamped_to_retention_and_today(client, db):
     assert len(data["daily"]) == 60
 
 
-async def test_quota_defaults_then_reads_the_quota_row(client, db):
+async def test_quota_defaults_then_reads_the_main_apps_hash(client, db, redis):
     await seed_key(db, user_id=ALICE)
     default = (await usage(client))["quota"]
-    async with db.begin() as session:
-        await session.execute(
-            insert(LlmQuota).values(user_id=ALICE, token_limit=1000, token_used=1200)
-        )
+    await redis.hset(f"quota:{ALICE}", mapping={"limit": 1000, "used": 1200})
 
     assert default["used"] == 0 and default["remaining"] == default["limit"]
     assert (await usage(client))["quota"] == {
@@ -137,6 +130,16 @@ async def test_quota_defaults_then_reads_the_quota_row(client, db):
         "used": 1200,
         "remaining": 0,
     }
+
+
+async def test_malformed_quota_hash_is_503(client, db, redis):
+    await seed_key(db, user_id=ALICE)
+    await redis.hset(f"quota:{ALICE}", mapping={"limit": "lots", "used": 0})
+
+    response = await client.get("/v1/usage", headers=as_user(ALICE))
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "llm_quota_unavailable"
 
 
 async def test_inverted_range_is_422(client, db):

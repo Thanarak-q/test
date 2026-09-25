@@ -4,9 +4,12 @@ import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 from sqlalchemy.exc import DisconnectionError, InterfaceError, OperationalError
@@ -17,9 +20,11 @@ from app.constants.infra import (
     REDIS_CONNECT_TIMEOUT_SECONDS,
     REDIS_SOCKET_TIMEOUT_SECONDS,
 )
+from app.constants.llm import MAX_OUTBOUND_CONCURRENCY
 from app.envelope import EnvelopeRoute, error_response, register_error_handlers
-from app.routers import api_keys, dashboard, health
+from app.routers import admin_models, api_keys, chat, dashboard, health
 from app.services.perkey_rate_limit import check_token_bucket_fits_largest_request
+from app.services.provider import PROVIDER_TIMEOUT, check_provider_config
 from app.services.proxy_trust import build_trusted_proxy_set
 from app.services.session_auth import check_session_config
 
@@ -28,6 +33,7 @@ from app.services.session_auth import check_session_config
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     check_token_bucket_fits_largest_request()
     check_session_config()
+    check_provider_config()
     # Normalised once here rather than per request: the proxy check sits on
     # the path that exists to reject floods as cheaply as possible.
     app.state.trusted_proxies = build_trusted_proxy_set(settings.trusted_proxy_ips)
@@ -37,9 +43,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         socket_connect_timeout=REDIS_CONNECT_TIMEOUT_SECONDS,
         socket_timeout=REDIS_SOCKET_TIMEOUT_SECONDS,
     )
+    # One client for every provider call: its pool is the outbound
+    # concurrency cap, so connections are reused rather than re-handshaken.
+    app.state.llm_http = httpx.AsyncClient(
+        timeout=PROVIDER_TIMEOUT,
+        limits=httpx.Limits(
+            max_connections=MAX_OUTBOUND_CONCURRENCY,
+            max_keepalive_connections=MAX_OUTBOUND_CONCURRENCY,
+        ),
+    )
     try:
         yield
     finally:
+        await app.state.llm_http.aclose()
         await app.state.redis.aclose()
 
 
@@ -157,3 +173,17 @@ for _error in _INFRASTRUCTURE_ERRORS:
 app.include_router(health.router)
 app.include_router(api_keys.router)
 app.include_router(dashboard.router)
+app.include_router(chat.router)
+app.include_router(admin_models.router)
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics(request: Request) -> Response:
+    """Prometheus scrape endpoint. Operational, like /health: unversioned and
+    unenveloped. Served only to localhost and the trusted proxy — never to
+    the public, since counts of outcomes and limits help someone probing."""
+    peer = request.client.host if request.client else None
+    allowed = {"127.0.0.1", "::1"} | request.app.state.trusted_proxies
+    if peer not in allowed:
+        return Response(status_code=404)
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

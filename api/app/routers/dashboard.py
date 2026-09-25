@@ -3,12 +3,14 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.retention import USAGE_RETENTION_DAYS
 from app.db import get_session
 from app.dependencies import get_current_user
 from app.envelope import EnvelopeRoute
+from app.redis import get_redis
 from app.services import dashboard
 
 router = APIRouter(prefix="/v1", tags=["dashboard"], route_class=EnvelopeRoute)
@@ -77,9 +79,11 @@ async def get_usage(
     key_id: str | None = Query(None, max_length=26),
     user_id: int = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
+    redis: Redis = Depends(get_redis),
 ) -> UsageResponse:
     report = await dashboard.usage_report(
         session,
+        redis,
         user_id=user_id,
         date_from=date_from,
         date_to=date_to,

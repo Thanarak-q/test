@@ -74,6 +74,40 @@ async def record_auth_failure(
     )
 
 
+ModelAction = Literal["model.enabled", "model.disabled"]
+
+_RECORD_MODEL_EVENT = text(
+    """
+    INSERT INTO llm_model_audit_logs
+        (actor_id, actor_type, action, target_id, request_id, source_ip, created_at)
+    VALUES (:actor_id, 'admin', :action, :target_id, :request_id, :source_ip, :at)
+    """
+).bindparams(bindparam("at", type_=_utc))
+
+
+async def record_model_event(
+    session: AsyncSession,
+    *,
+    actor_id: int,
+    action: ModelAction,
+    target_id: int,
+    source_ip: str | None,
+    request_id: str | None,
+    at: datetime,
+) -> None:
+    await session.execute(
+        _RECORD_MODEL_EVENT,
+        {
+            "actor_id": actor_id,
+            "action": action,
+            "target_id": target_id,
+            "request_id": request_id,
+            "source_ip": source_ip,
+            "at": at,
+        },
+    )
+
+
 # region Retention (run by app/jobs/retention.py, not by the app)
 _DELETE_KEY_EVENTS_BEFORE = text(
     """

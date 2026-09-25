@@ -18,10 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.constants.retention import (
     AUDIT_RETENTION_DAYS,
     AUTH_FAILURE_RETENTION_DAYS,
+    DELETED_KEY_RETENTION_DAYS,
+    PROVIDER_CALL_RETENTION_DAYS,
     RETENTION_DELETE_BATCH,
     USAGE_RETENTION_DAYS,
 )
-from app.repos import audit_repo, usage_repo
+from app.repos import api_key_repo, audit_repo, provider_call_repo, usage_repo
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,16 @@ POLICIES: tuple[tuple[str, DeleteBatch, int], ...] = (
         "identity_auth_failure_logs",
         audit_repo.delete_auth_failures_before,
         AUTH_FAILURE_RETENTION_DAYS,
+    ),
+    (
+        "llm_provider_call_logs",
+        provider_call_repo.delete_before,
+        PROVIDER_CALL_RETENTION_DAYS,
+    ),
+    (
+        "identity_api_keys (deleted)",
+        api_key_repo.purge_deleted_before,
+        DELETED_KEY_RETENTION_DAYS,
     ),
 )
 

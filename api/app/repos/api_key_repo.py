@@ -220,3 +220,25 @@ async def labels_for_user(
         _LABELS_FOR_USER, {"user_id": user_id, "key_ids": key_ids}
     )
     return [KeyLabelRow(**row) for row in rows.mappings()]
+
+
+# Retention (app/jobs/retention.py, its own DB user): a soft-deleted key keeps
+# its row for the audit trail, then is purged. Not user-scoped by design —
+# it runs across all users and touches only rows already marked deleted.
+_PURGE_DELETED_BEFORE = text(
+    """
+    DELETE FROM identity_api_keys
+    WHERE status = 'deleted' AND deleted_at < :before
+    ORDER BY deleted_at
+    LIMIT :batch
+    """
+).bindparams(bindparam("before", type_=_utc))
+
+
+async def purge_deleted_before(
+    session: AsyncSession, *, before: datetime, batch: int
+) -> int:
+    result = await session.execute(
+        _PURGE_DELETED_BEFORE, {"before": before, "batch": batch}
+    )
+    return result.rowcount

@@ -12,24 +12,31 @@ Migrations run as a separate, more privileged user. The app user never runs DDL.
 | `identity_api_keys`           |   ✓    |   ✓    |   ✓    |        | revoke / delete are soft (status change), never `DELETE` |
 | `identity_api_key_audit_logs` |   ✓    |   ✓    |        |        | append-only                                              |
 | `identity_auth_failure_logs`  |   ✓    |   ✓    |        |        | append-only                                              |
-| `llm_models`                  |   ✓    |        |        |        | managed by migrations / an admin user                    |
-| `llm_quotas`                  |   ✓    |   ✓    |   ✓    |        | counter re-seed and settle (chat pipeline)               |
+| `llm_models`                  |   ✓    |        |   ✓    |        | admins enable/disable models (`manage_model`)            |
+| `llm_model_audit_logs`        |   ✓    |   ✓    |        |        | append-only                                              |
+| `llm_provider_call_logs`      |   ✓    |   ✓    |        |        | append-only                                              |
 | `llm_usage_logs`              |   ✓    |   ✓    |        |        | append-only                                              |
 
 `UPDATE` on `identity_users` is there only because key creation takes the per-user
 lock with `INSERT … ON DUPLICATE KEY UPDATE id = id`, which MySQL checks against the
 `UPDATE` privilege even though nothing changes.
 
+Quota is not in MySQL: it lives in the main application's Redis hash
+`quota:{user_id}` (see `docs/planning/chat_pipeline.md`).
+
 Retention is enforced by `python -m app.jobs.retention` (run daily from cron) as a
-separate user that holds `SELECT, DELETE` on the three log tables only: 60 days for
-`llm_usage_logs`, 90 for `identity_api_key_audit_logs` and `identity_auth_failure_logs`
-(`app/constants/retention.py`).
+separate user that holds `SELECT, DELETE` on the log tables and on
+`identity_api_keys` (it purges keys soft-deleted more than 90 days ago): 60 days for
+`llm_usage_logs` and `llm_provider_call_logs`, 90 for `identity_api_key_audit_logs`
+and `identity_auth_failure_logs` (`app/constants/retention.py`).
 
 ```sql
 CREATE USER 'matthew_retention'@'%' IDENTIFIED BY '...';
 GRANT SELECT, DELETE ON matthew.llm_usage_logs              TO 'matthew_retention'@'%';
 GRANT SELECT, DELETE ON matthew.identity_api_key_audit_logs TO 'matthew_retention'@'%';
 GRANT SELECT, DELETE ON matthew.identity_auth_failure_logs  TO 'matthew_retention'@'%';
+GRANT SELECT, DELETE ON matthew.llm_provider_call_logs      TO 'matthew_retention'@'%';
+GRANT SELECT, DELETE ON matthew.identity_api_keys           TO 'matthew_retention'@'%';
 ```
 
 ```sql
@@ -40,12 +47,11 @@ GRANT SELECT, INSERT, UPDATE ON matthew.identity_users              TO 'matthew_
 GRANT SELECT, INSERT, UPDATE ON matthew.identity_api_keys           TO 'matthew_app'@'%';
 GRANT SELECT, INSERT         ON matthew.identity_api_key_audit_logs TO 'matthew_app'@'%';
 GRANT SELECT, INSERT         ON matthew.identity_auth_failure_logs  TO 'matthew_app'@'%';
-GRANT SELECT                 ON matthew.llm_models                  TO 'matthew_app'@'%';
-GRANT SELECT, INSERT, UPDATE ON matthew.llm_quotas                  TO 'matthew_app'@'%';
+GRANT SELECT, UPDATE         ON matthew.llm_models                  TO 'matthew_app'@'%';
+GRANT SELECT, INSERT         ON matthew.llm_model_audit_logs        TO 'matthew_app'@'%';
+GRANT SELECT, INSERT         ON matthew.llm_provider_call_logs      TO 'matthew_app'@'%';
 GRANT SELECT, INSERT         ON matthew.llm_usage_logs              TO 'matthew_app'@'%';
 ```
 
 The compose file's `matthew` user has `ALL` on the database. That is for local
 development only and is not what production should run as.
-
-TODO(chat-pipeline): confirm the `llm_*` rows with the pipeline owner.

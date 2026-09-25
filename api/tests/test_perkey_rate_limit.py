@@ -3,12 +3,12 @@ from fastapi import HTTPException
 from redis.exceptions import RedisError
 
 from app.constants.perkey_rate_limit import (
-    MAX_INPUT_TOKENS,
     RATE_LIMIT_CAPACITY,
     TOKEN_RATE_LIMIT_CAPACITY,
 )
 from app.envelope import AppError
 from app.services.perkey_rate_limit import (
+    MAX_REQUEST_COST,
     check_token_bucket_fits_largest_request,
     perkey_rate_limit,
 )
@@ -111,8 +111,8 @@ def test_startup_check_rejects_request_larger_than_bucket():
 async def test_oversized_estimate_is_413_before_redis():
     redis = StubRedis()
 
-    with pytest.raises(HTTPException) as exc_info:
-        await perkey_rate_limit(redis, 7, MAX_INPUT_TOKENS + 1)
+    with pytest.raises(AppError) as exc_info:
+        await perkey_rate_limit(redis, 7, MAX_REQUEST_COST + 1)
 
     assert exc_info.value.status_code == 413
     assert redis.calls == []

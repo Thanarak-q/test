@@ -10,12 +10,13 @@ from datetime import date, datetime, time, timedelta
 from typing import Literal
 from zoneinfo import ZoneInfo
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.constants.retention import USAGE_DEFAULT_RANGE_DAYS, USAGE_RETENTION_DAYS
 from app.envelope import AppError
-from app.services import api_keys, llm_usage
+from app.services import api_keys, llm_usage, quota
 
 Source = Literal["api", "web"]
 
@@ -77,6 +78,7 @@ def today(zone: ZoneInfo | None = None) -> date:
 
 async def usage_report(
     session: AsyncSession,
+    redis: Redis,
     *,
     user_id: int,
     date_from: date | None,
@@ -129,7 +131,8 @@ async def usage_report(
     total_requests = sum(requests for requests, _ in daily.values())
     total_tokens = sum(tokens for _, tokens in daily.values())
     labels = await api_keys.labels(session, user_id, list(by_key))
-    limit, used = await llm_usage.quota(session, user_id)
+    state = await quota.read_quota(redis, user_id)
+    limit, used = state.limit, state.used
 
     return UsageReport(
         date_from=start_date,

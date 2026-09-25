@@ -20,10 +20,17 @@ class Settings(BaseSettings):
     db_max_overflow: int = 10
 
     llm_base_url: str = "https://api.openai.com/v1"
-    llm_api_key: str = ""
-    llm_timeout_s: float = 120.0
+    # Path to a file holding the provider API key — mounted from the secret
+    # store, one per environment. Read on every call so a rotated key takes
+    # effect without a restart; the key itself is never held in settings.
+    # Required outside dev/test (startup refuses to boot without it).
+    llm_api_key_file: str | None = None
+    # Used only when the main application's quota:{user_id} has no `limit`.
     llm_token_quota: int = 1_000_000
-    llm_output_reserve: int = 1_024
+
+    # The account app/jobs/quota_health.py inspects to catch the main
+    # application changing the shape of quota:{user_id}.
+    quota_health_user_id: int | None = None
 
     # Dev only: act as this user without a main-application session. Startup
     # refuses to boot if it is set while ENV is anything but "dev".

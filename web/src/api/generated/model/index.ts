@@ -16,6 +16,8 @@ export * from './keySummaryResponse';
 export * from './keySummaryResponseStatus';
 export * from './keyUsageResponse';
 export * from './keyUsageResponseStatus';
+export * from './modelChangeResponse';
+export * from './modelIdRequest';
 export * from './okResponse';
 export * from './quotaResponse';
 export * from './sourceUsageResponse';

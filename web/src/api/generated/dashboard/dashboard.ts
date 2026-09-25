@@ -28,6 +28,8 @@ import type {
 import { customInstance } from '../../mutator';
 
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 
 
 const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
@@ -50,7 +52,7 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
  */
 export const getUsage = (
     params?: GetUsageParams,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
@@ -58,7 +60,7 @@ export const getUsage = (
       {url: `/v1/usage`, method: 'GET',
         params, signal
     },
-      );
+      options);
     }
 
 
@@ -71,16 +73,16 @@ export const getGetUsageQueryKey = (params?: GetUsageParams,) => {
     }
 
 
-export const getGetUsageQueryOptions = <TData = Awaited<ReturnType<typeof getUsage>>, TError = HTTPValidationError>(params?: GetUsageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsage>>, TError, TData>>, }
+export const getGetUsageQueryOptions = <TData = Awaited<ReturnType<typeof getUsage>>, TError = HTTPValidationError>(params?: GetUsageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsage>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetUsageQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsage>>> = ({ signal }) => getUsage(params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUsage>>> = ({ signal }) => getUsage(params, requestOptions, signal);
 
 
 
@@ -100,7 +102,7 @@ export function useGetUsage<TData = Awaited<ReturnType<typeof getUsage>>, TError
           TError,
           Awaited<ReturnType<typeof getUsage>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetUsage<TData = Awaited<ReturnType<typeof getUsage>>, TError = HTTPValidationError>(
@@ -110,11 +112,11 @@ export function useGetUsage<TData = Awaited<ReturnType<typeof getUsage>>, TError
           TError,
           Awaited<ReturnType<typeof getUsage>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetUsage<TData = Awaited<ReturnType<typeof getUsage>>, TError = HTTPValidationError>(
- params?: GetUsageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsage>>, TError, TData>>, }
+ params?: GetUsageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsage>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -122,7 +124,7 @@ export function useGetUsage<TData = Awaited<ReturnType<typeof getUsage>>, TError
  */
 
 export function useGetUsage<TData = Awaited<ReturnType<typeof getUsage>>, TError = HTTPValidationError>(
- params?: GetUsageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsage>>, TError, TData>>, }
+ params?: GetUsageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getUsage>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 

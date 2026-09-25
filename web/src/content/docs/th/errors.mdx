@@ -5,16 +5,24 @@ Error จะกลับมาพร้อม HTTP status และ body ที�
 
 <CodeBlock label="Error response" code={errorResponse.code} />
 
-| Status | Code                               | ความหมาย                                 | สิ่งที่ควรทำ                                                      |
-| ------ | ---------------------------------- | ---------------------------------------- | ----------------------------------------------------------------- |
-| 400    | `http_400`                         | ไม่ได้ส่งผ่าน HTTPS หรือไม่ได้ผ่าน proxy | ใช้ `https://` ถ้าคีย์เคยส่งผ่าน HTTP ให้เพิกถอนแล้วสร้างคีย์ใหม่ |
-| 401    | `http_401`                         | ยืนยันตัวตนไม่ผ่าน                       | ตรวจว่าคีย์ครบ และยังใช้งานอยู่ในหน้า API Keys                    |
-| 413    | `http_413`                         | Input เกินเพดานโทเคนต่อคำขอ              | ส่ง prompt ที่สั้นลง                                              |
-| 422    | `validation_error`                 | Request body ผิดรูปแบบ                   | แก้ field ที่ระบุไว้ใน `message`                                  |
-| 429    | `rate_limit_exceeded_requests`     | ส่งคำขอมากเกินไป                         | รอ `Retry-After` วินาที แล้วลองใหม่                               |
-| 429    | `rate_limit_exceeded_tokens`       | ใช้โทเคนมากเกินไป                        | รอ `Retry-After` วินาที หรือส่งให้น้อยลง                          |
-| 500    | `internal_error`                   | เกิดปัญหาฝั่งเรา                         | ลองใหม่หนึ่งครั้ง ถ้ายังเป็นอยู่ ให้แจ้งพร้อม request id          |
-| 503    | `http_503` / `service_unavailable` | ระบบที่เราพึ่งพาใช้งานไม่ได้ชั่วคราว     | ลองใหม่แบบเว้นระยะ ดู [Rate limits](/docs/rate-limits)            |
+| Status | Code                                                  | ความหมาย                                          | สิ่งที่ควรทำ                                                      |
+| ------ | ----------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------- |
+| 400    | `http_400`                                            | ไม่ได้ส่งผ่าน HTTPS หรือไม่ได้ผ่าน proxy          | ใช้ `https://` ถ้าคีย์เคยส่งผ่าน HTTP ให้เพิกถอนแล้วสร้างคีย์ใหม่ |
+| 400    | `llm_unsupported_parameter`                           | คำขอใช้ parameter ที่ API นี้ไม่รองรับ            | เอา parameter ที่ระบุใน `message` ออก                             |
+| 400    | `llm_invalid_request` / `llm_model_required`          | Body ไม่ใช่ JSON ที่ถูกต้อง หรือ field ขาดหรือผิด | แก้ field ที่ระบุไว้ใน `message`                                  |
+| 400    | `llm_invalid_role` / `llm_invalid_messages`           | role หรือ content ของข้อความไม่อนุญาต             | ใช้ role `system`, `user`, `assistant` และ content เป็นข้อความ    |
+| 400    | `llm_context_window_exceeded`                         | prompt รวมกับ `max_tokens` เกิน context ของโมเดล  | ย่อ prompt หรือลด `max_tokens`                                    |
+| 400    | `llm_idempotency_conflict`                            | ใช้ `Idempotency-Key` ซ้ำกับคำขอที่ต่างกัน        | ใช้คีย์ใหม่สำหรับคำขอใหม่                                         |
+| 401    | `http_401`                                            | ยืนยันตัวตนไม่ผ่าน                                | ตรวจว่าคีย์ครบ และยังใช้งานอยู่ในหน้า API Keys                    |
+| 403    | `llm_model_not_allowed`                               | ไม่มีโมเดลนี้ หรือโมเดลไม่ได้เปิดใช้              | เลือกโมเดลจากหน้า [Models](/docs/models)                          |
+| 413    | `llm_input_too_large` / `llm_request_too_large`       | Input เกินเพดานโทเคนต่อคำขอ                       | ส่ง prompt ที่สั้นลง                                              |
+| 422    | `llm_quota_exceeded`                                  | โควตาโทเคนของคุณหมดแล้ว                           | ดูหน้า Usage โควตานี้ใช้ร่วมกับเว็บแอป                            |
+| 429    | `rate_limit_exceeded_requests`                        | ส่งคำขอมากเกินไป                                  | รอ `Retry-After` วินาที แล้วลองใหม่                               |
+| 429    | `rate_limit_exceeded_tokens`                          | ใช้โทเคนมากเกินไป                                 | รอ `Retry-After` วินาที หรือส่งให้น้อยลง                          |
+| 500    | `internal_error`                                      | เกิดปัญหาฝั่งเรา                                  | ลองใหม่หนึ่งครั้ง ถ้ายังเป็นอยู่ ให้แจ้งพร้อม request id          |
+| 502    | `llm_provider_bad_response`                           | ผู้ให้บริการโมเดลตอบกลับมาในรูปแบบที่ใช้ไม่ได้    | ลองใหม่ด้วย `Idempotency-Key` เดิม                                |
+| 503    | `llm_provider_unavailable` / `llm_capacity_exhausted` | ผู้ให้บริการช้าหรือล่ม หรือระบบเราเต็ม            | ลองใหม่แบบเว้นระยะ ด้วย `Idempotency-Key` เดิม                    |
+| 503    | `service_unavailable` / `llm_quota_unavailable`       | ระบบที่เราพึ่งพาใช้งานไม่ได้ชั่วคราว              | ลองใหม่แบบเว้นระยะ ดู [Rate limits](/docs/rate-limits)            |
 
 ## 401 ไม่บอกสาเหตุ
 

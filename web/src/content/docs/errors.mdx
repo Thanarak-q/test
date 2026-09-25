@@ -5,16 +5,24 @@ human-readable `message`. Branch on `code`, not on `message`: messages may chang
 
 <CodeBlock label="Error response" code={errorResponse.code} />
 
-| Status | Code                               | Meaning                                       | What to do                                                              |
-| ------ | ---------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------- |
-| 400    | `http_400`                         | Not sent over HTTPS, or not through the proxy | Use `https://`. If the key went over HTTP, revoke it and make a new one |
-| 401    | `http_401`                         | Authentication failed                         | Check the key is complete and still active on the API Keys page         |
-| 413    | `http_413`                         | Input is over the per-request token cap       | Send a shorter prompt                                                   |
-| 422    | `validation_error`                 | The request body is malformed                 | Fix the field named in `message`                                        |
-| 429    | `rate_limit_exceeded_requests`     | Too many requests                             | Wait `Retry-After` seconds, then retry                                  |
-| 429    | `rate_limit_exceeded_tokens`       | Too many tokens                               | Wait `Retry-After` seconds, or send less                                |
-| 500    | `internal_error`                   | Something went wrong on our side              | Retry once; if it persists, report it with the request id               |
-| 503    | `http_503` / `service_unavailable` | A dependency is temporarily unavailable       | Retry with backoff — see [Rate limits](/docs/rate-limits)               |
+| Status | Code                                                  | Meaning                                                 | What to do                                                              |
+| ------ | ----------------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 400    | `http_400`                                            | Not sent over HTTPS, or not through the proxy           | Use `https://`. If the key went over HTTP, revoke it and make a new one |
+| 400    | `llm_unsupported_parameter`                           | The request uses a parameter this API does not support  | Remove the parameter named in `message`                                 |
+| 400    | `llm_invalid_request` / `llm_model_required`          | The body is not valid JSON, or a field is missing/wrong | Fix the field named in `message`                                        |
+| 400    | `llm_invalid_role` / `llm_invalid_messages`           | A message role or content is not allowed                | Use roles `system`, `user`, `assistant` with string content             |
+| 400    | `llm_context_window_exceeded`                         | Prompt plus `max_tokens` does not fit the model         | Shorten the prompt or lower `max_tokens`                                |
+| 400    | `llm_idempotency_conflict`                            | The `Idempotency-Key` was used with a different request | Use a new key for a new request                                         |
+| 401    | `http_401`                                            | Authentication failed                                   | Check the key is complete and still active on the API Keys page         |
+| 403    | `llm_model_not_allowed`                               | The model does not exist or is not enabled              | Pick a model from the [Models](/docs/models) page                       |
+| 413    | `llm_input_too_large` / `llm_request_too_large`       | Input is over the per-request token cap                 | Send a shorter prompt                                                   |
+| 422    | `llm_quota_exceeded`                                  | Your token quota is used up                             | Check the Usage page; the quota is shared with the web app              |
+| 429    | `rate_limit_exceeded_requests`                        | Too many requests                                       | Wait `Retry-After` seconds, then retry                                  |
+| 429    | `rate_limit_exceeded_tokens`                          | Too many tokens                                         | Wait `Retry-After` seconds, or send less                                |
+| 500    | `internal_error`                                      | Something went wrong on our side                        | Retry once; if it persists, report it with the request id               |
+| 502    | `llm_provider_bad_response`                           | The model provider returned something unusable          | Retry with the same `Idempotency-Key`                                   |
+| 503    | `llm_provider_unavailable` / `llm_capacity_exhausted` | The provider is slow or down, or we are at capacity     | Retry with backoff and the same `Idempotency-Key`                       |
+| 503    | `service_unavailable` / `llm_quota_unavailable`       | A dependency is temporarily unavailable                 | Retry with backoff — see [Rate limits](/docs/rate-limits)               |
 
 ## 401 never says why
 

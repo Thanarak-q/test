@@ -25,14 +25,19 @@ may not exceed <Value path="limits.maxInputTokens" /> tokens of input. Not suppo
 
 ## Errors
 
-| Status | Code                           | When                                                     |
-| ------ | ------------------------------ | -------------------------------------------------------- |
-| 400    | `http_400`                     | Not HTTPS, or the request did not come through the proxy |
-| 401    | `http_401`                     | The key is missing, wrong or not active                  |
-| 413    | `http_413`                     | Input exceeds the per-request token cap                  |
-| 422    | `validation_error`             | The body does not match the schema above                 |
-| 429    | `rate_limit_exceeded_requests` | Request limit reached                                    |
-| 429    | `rate_limit_exceeded_tokens`   | Token limit reached                                      |
-| 503    | `http_503`                     | A dependency is unavailable — retry later                |
+| Status | Code                                                  | When                                                                |
+| ------ | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| 400    | `http_400`                                            | Not HTTPS, or the request did not come through the proxy            |
+| 400    | `llm_unsupported_parameter`                           | <Value path="unsupportedParams" /> or another unsupported parameter |
+| 400    | `llm_invalid_request` / `llm_model_required`          | Invalid JSON, a missing `model`, or a field out of range            |
+| 400    | `llm_invalid_role` / `llm_context_window_exceeded`    | A role other than system/user/assistant, or too long for the model  |
+| 401    | `http_401`                                            | The key is missing, wrong or not active                             |
+| 403    | `llm_model_not_allowed`                               | The model is not on the list or is disabled                         |
+| 413    | `llm_input_too_large`                                 | Input exceeds the per-request token cap                             |
+| 422    | `llm_quota_exceeded`                                  | Your token quota is used up                                         |
+| 429    | `rate_limit_exceeded_requests`                        | Request limit reached                                               |
+| 429    | `rate_limit_exceeded_tokens`                          | Token limit reached                                                 |
+| 502    | `llm_provider_bad_response`                           | The provider's reply was unusable                                   |
+| 503    | `llm_provider_unavailable` / `llm_capacity_exhausted` | The provider timed out or is down, or we are at capacity            |
 
 Details and what to do: [Errors](/docs/errors).

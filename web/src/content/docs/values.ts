@@ -21,7 +21,8 @@ export const docsValues = {
     requests: { capacity: 10, refillPerMinute: 20 },
     tokens: { capacity: 20_000, refillPerMinute: 20_000 },
     maxInputTokens: 8_192,
-    maxOutputTokens: 0, // TBD
+    // POLICY_CAP in api/app/constants/llm.py (a model's own cap may be lower)
+    maxOutputTokens: 4_096,
   },
   models: [
     // The llm_models whitelist seeded by the migration.

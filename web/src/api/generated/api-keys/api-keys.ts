@@ -35,6 +35,8 @@ import type {
 import { customInstance } from '../../mutator';
 
 
+type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
 
 
 const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
@@ -57,7 +59,7 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
  */
 export const createApiKey = (
     createKeyRequest: CreateKeyRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
@@ -66,7 +68,7 @@ export const createApiKey = (
       headers: {'Content-Type': 'application/json', },
       data: createKeyRequest, signal
     },
-      );
+      options);
     }
 
 
@@ -75,15 +77,15 @@ export const createApiKey = (
 export const getCreateApiKeyMutationKey = () => ['createApiKey'] as const;
 
 export const getCreateApiKeyMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,CreateApiKeyMutationVariables, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,CreateApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,CreateApiKeyMutationVariables, TContext> => {
 
 const mutationKey = getCreateApiKeyMutationKey();
-const {mutation: mutationOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
@@ -91,7 +93,7 @@ const {mutation: mutationOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof createApiKey>>, CreateApiKeyMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  createApiKey(data,)
+          return  createApiKey(data,requestOptions)
         }
 
 
@@ -110,7 +112,7 @@ const {mutation: mutationOptions} = options ?
  * @summary Create Api Key
  */
 export const useCreateApiKey = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,CreateApiKeyMutationVariables, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createApiKey>>, TError,CreateApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createApiKey>>,
         TError,
@@ -124,14 +126,14 @@ export const useCreateApiKey = <TError = HTTPValidationError,
  */
 export const listApiKeys = (
 
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
       return customInstance<KeySummaryResponse[]>(
       {url: `/v1/api-keys/list`, method: 'POST', signal
     },
-      );
+      options);
     }
 
 
@@ -144,16 +146,16 @@ export const getListApiKeysQueryKey = () => {
     }
 
 
-export const getListApiKeysQueryOptions = <TData = Awaited<ReturnType<typeof listApiKeys>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>>, }
+export const getListApiKeysQueryOptions = <TData = Awaited<ReturnType<typeof listApiKeys>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getListApiKeysQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApiKeys>>> = ({ signal }) => listApiKeys(signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApiKeys>>> = ({ signal }) => listApiKeys(requestOptions, signal);
 
 
 
@@ -173,7 +175,7 @@ export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, 
           TError,
           Awaited<ReturnType<typeof listApiKeys>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, TError = unknown>(
@@ -183,11 +185,11 @@ export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, 
           TError,
           Awaited<ReturnType<typeof listApiKeys>>
         > , 'initialData'
-      >, }
+      >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>>, }
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -195,7 +197,7 @@ export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, 
  */
 
 export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>>, }
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listApiKeys>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
@@ -216,7 +218,7 @@ export function useListApiKeys<TData = Awaited<ReturnType<typeof listApiKeys>>, 
  */
 export const revokeApiKey = (
     keyIdRequest: KeyIdRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
@@ -225,7 +227,7 @@ export const revokeApiKey = (
       headers: {'Content-Type': 'application/json', },
       data: keyIdRequest, signal
     },
-      );
+      options);
     }
 
 
@@ -234,15 +236,15 @@ export const revokeApiKey = (
 export const getRevokeApiKeyMutationKey = () => ['revokeApiKey'] as const;
 
 export const getRevokeApiKeyMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,RevokeApiKeyMutationVariables, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,RevokeApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,RevokeApiKeyMutationVariables, TContext> => {
 
 const mutationKey = getRevokeApiKeyMutationKey();
-const {mutation: mutationOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
@@ -250,7 +252,7 @@ const {mutation: mutationOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeApiKey>>, RevokeApiKeyMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  revokeApiKey(data,)
+          return  revokeApiKey(data,requestOptions)
         }
 
 
@@ -269,7 +271,7 @@ const {mutation: mutationOptions} = options ?
  * @summary Revoke Api Key
  */
 export const useRevokeApiKey = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,RevokeApiKeyMutationVariables, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeApiKey>>, TError,RevokeApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof revokeApiKey>>,
         TError,
@@ -283,7 +285,7 @@ export const useRevokeApiKey = <TError = HTTPValidationError,
  */
 export const deleteApiKey = (
     keyIdRequest: KeyIdRequest,
- signal?: AbortSignal
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
@@ -292,7 +294,7 @@ export const deleteApiKey = (
       headers: {'Content-Type': 'application/json', },
       data: keyIdRequest, signal
     },
-      );
+      options);
     }
 
 
@@ -301,15 +303,15 @@ export const deleteApiKey = (
 export const getDeleteApiKeyMutationKey = () => ['deleteApiKey'] as const;
 
 export const getDeleteApiKeyMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,DeleteApiKeyMutationVariables, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,DeleteApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,DeleteApiKeyMutationVariables, TContext> => {
 
 const mutationKey = getDeleteApiKeyMutationKey();
-const {mutation: mutationOptions} = options ?
+const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
       : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
@@ -317,7 +319,7 @@ const {mutation: mutationOptions} = options ?
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteApiKey>>, DeleteApiKeyMutationVariables> = (props) => {
           const {data} = props ?? {};
 
-          return  deleteApiKey(data,)
+          return  deleteApiKey(data,requestOptions)
         }
 
 
@@ -336,7 +338,7 @@ const {mutation: mutationOptions} = options ?
  * @summary Delete Api Key
  */
 export const useDeleteApiKey = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,DeleteApiKeyMutationVariables, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteApiKey>>, TError,DeleteApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteApiKey>>,
         TError,

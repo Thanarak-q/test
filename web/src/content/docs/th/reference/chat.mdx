@@ -25,14 +25,19 @@ import { chatRequest, chatRequestSchema, chatResponse, chatResponseSchema } from
 
 ## Errors
 
-| Status | Code                           | เกิดเมื่อ                                   |
-| ------ | ------------------------------ | ------------------------------------------- |
-| 400    | `http_400`                     | ไม่ใช่ HTTPS หรือคำขอไม่ได้มาผ่าน proxy     |
-| 401    | `http_401`                     | ไม่มีคีย์ คีย์ผิด หรือคีย์ไม่ได้ใช้งานอยู่  |
-| 413    | `http_413`                     | Input เกินเพดานโทเคนต่อคำขอ                 |
-| 422    | `validation_error`             | Body ไม่ตรงกับ schema ข้างบน                |
-| 429    | `rate_limit_exceeded_requests` | ชนข้อจำกัดด้านคำขอ                          |
-| 429    | `rate_limit_exceeded_tokens`   | ชนข้อจำกัดด้านโทเคน                         |
-| 503    | `http_503`                     | ระบบที่เราพึ่งพาใช้งานไม่ได้ ลองใหม่ภายหลัง |
+| Status | Code                                                  | เกิดเมื่อ                                                              |
+| ------ | ----------------------------------------------------- | ---------------------------------------------------------------------- |
+| 400    | `http_400`                                            | ไม่ใช่ HTTPS หรือคำขอไม่ได้มาผ่าน proxy                                |
+| 400    | `llm_unsupported_parameter`                           | ใช้ <Value path="unsupportedParams" /> หรือ parameter อื่นที่ไม่รองรับ |
+| 400    | `llm_invalid_request` / `llm_model_required`          | JSON ไม่ถูกต้อง ไม่มี `model` หรือค่า field อยู่นอกช่วง                |
+| 400    | `llm_invalid_role` / `llm_context_window_exceeded`    | role ไม่ใช่ system/user/assistant หรือยาวเกินที่โมเดลรับได้            |
+| 401    | `http_401`                                            | ไม่มีคีย์ คีย์ผิด หรือคีย์ไม่ได้ใช้งานอยู่                             |
+| 403    | `llm_model_not_allowed`                               | โมเดลไม่อยู่ในรายการหรือถูกปิดใช้                                      |
+| 413    | `llm_input_too_large`                                 | Input เกินเพดานโทเคนต่อคำขอ                                            |
+| 422    | `llm_quota_exceeded`                                  | โควตาโทเคนของคุณหมดแล้ว                                                |
+| 429    | `rate_limit_exceeded_requests`                        | ชนข้อจำกัดด้านคำขอ                                                     |
+| 429    | `rate_limit_exceeded_tokens`                          | ชนข้อจำกัดด้านโทเคน                                                    |
+| 502    | `llm_provider_bad_response`                           | คำตอบจากผู้ให้บริการใช้ไม่ได้                                          |
+| 503    | `llm_provider_unavailable` / `llm_capacity_exhausted` | ผู้ให้บริการหมดเวลาหรือล่ม หรือระบบเราเต็ม                             |
 
 รายละเอียดและสิ่งที่ควรทำ: [Errors](/docs/errors)

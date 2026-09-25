@@ -9,11 +9,13 @@ from redis.asyncio import Redis
 from app.config import settings
 from app.envelope import EnvelopeRoute, register_error_handlers
 from app.routers import health
+from app.services.perkey_rate_limit import check_token_bucket_fits_largest_request
 from app.services.proxy_trust import build_trusted_proxy_set
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    check_token_bucket_fits_largest_request()
     # Normalised once here rather than per request: the proxy check sits on
     # the path that exists to reject floods as cheaply as possible.
     app.state.trusted_proxies = build_trusted_proxy_set(settings.trusted_proxy_ips)
@@ -71,7 +73,13 @@ async def add_cache_headers(request: Request, call_next):
 
 register_error_handlers(app)
 
-# Operational, not part of the API surface: no version prefix, no auth, and
-# it must not touch Redis, the database, or the provider — otherwise it
-# becomes an unauthenticated way to load them.
+# Each API router declares its own prefix and route class
+# (`APIRouter(prefix="/v1/...", route_class=EnvelopeRoute)`), so a router's
+# path is readable from its own file. The route class must be on the router:
+# include_router keeps each route's own class, so setting it on app.router
+# alone leaves included routes unwrapped.
+#
+# Health is the exception. Operational, not part of the API surface: no
+# version prefix, no auth, and it must not touch Redis, the database, or the
+# provider — otherwise it becomes an unauthenticated way to load them.
 app.include_router(health.router)

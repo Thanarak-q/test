@@ -34,10 +34,17 @@ class Envelope(BaseModel, Generic[T]):
 
 
 class AppError(Exception):
-    def __init__(self, code: str, message: str, status_code: int = 400) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        status_code: int = 400,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.code = code
         self.message = message
         self.status_code = status_code
+        self.headers = headers
 
 
 def _fail(
@@ -96,7 +103,7 @@ class EnvelopeRoute(APIRoute):
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
-        return _fail(exc.code, exc.message, exc.status_code)
+        return _fail(exc.code, exc.message, exc.status_code, exc.headers)
 
     @app.exception_handler(HTTPException)
     async def _http_error(_: Request, exc: HTTPException) -> JSONResponse:

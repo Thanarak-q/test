@@ -194,7 +194,7 @@ Implement the functions in this order. Each phase supplies a dependency for the 
   - ใช้เฉพาะ rate limit — quota reconcile ใช้ค่าจริงจาก provider
 - est_tokens > MAX_INPUT_TOKENS -> 413 ก่อนแตะ bucket
 - lua script เดียว รับ 2 KEYS ตรวจทั้งคู่ก่อนหัก ← เปลี่ยน
-  - rl:key:{user_id} request count, cost 1
+  - rl:req:{user_id} request count, cost 1
   - rl:tok:{user_id} llm token volume, cost est_tokens
   - ผ่านทั้งคู่ -> หักทั้งคู่
   - ตัวใดตัวหนึ่งไม่ผ่าน -> ไม่หักเลย + คืน limit_type ← เพิ่ม

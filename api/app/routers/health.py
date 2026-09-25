@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
-router = APIRouter()
+from app.envelope import EnvelopeRoute
+
+router = APIRouter(route_class=EnvelopeRoute)
 
 
 @router.get("/health")

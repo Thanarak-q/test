@@ -17,7 +17,6 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.openai.com/v1"
     llm_api_key: str = ""
     llm_timeout_s: float = 120.0
-    llm_default_user_id: int = 1
     llm_token_quota: int = 1_000_000
     llm_output_reserve: int = 1_024
 

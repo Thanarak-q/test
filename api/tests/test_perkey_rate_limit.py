@@ -7,7 +7,14 @@ from app.constants.perkey_rate_limit import (
     RATE_LIMIT_CAPACITY,
     TOKEN_RATE_LIMIT_CAPACITY,
 )
-from app.services.perkey_rate_limit import perkey_rate_limit
+from app.envelope import AppError
+from app.services.perkey_rate_limit import (
+    check_token_bucket_fits_largest_request,
+    perkey_rate_limit,
+)
+
+# allowed, limit_type, req_remaining, req_reset, tok_remaining, tok_reset, retry
+ALLOWED_REPLY = [1, "", 9, 3, 19_880, 1, 0]
 
 
 class StubRedis:
@@ -18,7 +25,7 @@ class StubRedis:
     """
 
     def __init__(self, reply=None, error=False):
-        self.reply = reply or [1, "request", RATE_LIMIT_CAPACITY, 9, 3, 0]
+        self.reply = reply or ALLOWED_REPLY
         self.error = error
         self.calls = []
 
@@ -36,44 +43,69 @@ async def test_allows_and_charges_both_buckets():
 
     numkeys, args = redis.calls[0]
     assert numkeys == 2
-    assert args[0:2] == ["rl:key:7", "rl:tok:7"]
+    assert args[0:2] == ["rl:req:7", "rl:tok:7"]
     assert args[-1] == 120  # cost passed through unchanged
-    assert result.limit_type == "request"
-    assert result.remaining == 9
+    assert result.headers() == {
+        "RateLimit-Limit": str(RATE_LIMIT_CAPACITY),
+        "RateLimit-Remaining": "9",
+        "RateLimit-Reset": "3",
+        "X-RateLimit-Tokens-Limit": str(TOKEN_RATE_LIMIT_CAPACITY),
+        "X-RateLimit-Tokens-Remaining": "19880",
+        "X-RateLimit-Tokens-Reset": "1",
+    }
 
 
-async def test_denied_request_bucket_returns_429_with_headers():
-    redis = StubRedis([0, "request", RATE_LIMIT_CAPACITY, 0, 12, 4])
+async def test_denied_request_bucket_is_429_with_both_header_sets():
+    redis = StubRedis([0, "requests", 0, 12, 20_000, 0, 4])
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AppError) as exc_info:
         await perkey_rate_limit(redis, 7, 120)
 
     exc = exc_info.value
     assert exc.status_code == 429
+    assert exc.code == "rate_limit_exceeded_requests"
     assert exc.headers == {
         "RateLimit-Limit": str(RATE_LIMIT_CAPACITY),
         "RateLimit-Remaining": "0",
         "RateLimit-Reset": "12",
+        "X-RateLimit-Tokens-Limit": str(TOKEN_RATE_LIMIT_CAPACITY),
+        "X-RateLimit-Tokens-Remaining": "20000",
+        "X-RateLimit-Tokens-Reset": "0",
         "Retry-After": "4",
     }
 
 
-async def test_denied_token_bucket_reports_token_limit_type():
-    redis = StubRedis([0, "token", TOKEN_RATE_LIMIT_CAPACITY, 30, 60, 9])
+async def test_denied_token_bucket_keeps_request_headers_for_requests():
+    redis = StubRedis([0, "tokens", 8, 6, 30, 60, 9])
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AppError) as exc_info:
         await perkey_rate_limit(redis, 7, 120)
 
-    assert exc_info.value.headers["RateLimit-Limit"] == str(TOKEN_RATE_LIMIT_CAPACITY)
+    exc = exc_info.value
+    assert exc.code == "rate_limit_exceeded_tokens"
+    # token state never leaks into the request headers
+    assert exc.headers["RateLimit-Limit"] == str(RATE_LIMIT_CAPACITY)
+    assert exc.headers["RateLimit-Remaining"] == "8"
+    assert exc.headers["X-RateLimit-Tokens-Remaining"] == "30"
+    assert exc.headers["Retry-After"] == "9"
 
 
 async def test_retry_after_never_drops_below_one_second():
-    redis = StubRedis([0, "request", RATE_LIMIT_CAPACITY, 0, 1, 0])
+    redis = StubRedis([0, "requests", 0, 1, 20_000, 0, 0])
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AppError) as exc_info:
         await perkey_rate_limit(redis, 7, 1)
 
     assert exc_info.value.headers["Retry-After"] == "1"
+
+
+def test_shipped_limits_fit_the_largest_request():
+    check_token_bucket_fits_largest_request()
+
+
+def test_startup_check_rejects_request_larger_than_bucket():
+    with pytest.raises(RuntimeError):
+        check_token_bucket_fits_largest_request(max_cost=20_001, capacity=20_000)
 
 
 async def test_oversized_estimate_is_413_before_redis():

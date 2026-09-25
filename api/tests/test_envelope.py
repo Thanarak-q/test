@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from app.envelope import register_error_handlers
+from app.envelope import AppError, register_error_handlers
 
 
 def test_http_exception_preserves_rate_limit_headers():
@@ -20,4 +20,24 @@ def test_http_exception_preserves_rate_limit_headers():
 
     assert response.status_code == 429
     assert response.headers["RateLimit-Remaining"] == "0"
+    assert response.headers["Retry-After"] == "3"
+
+
+def test_app_error_carries_its_code_and_headers():
+    app = FastAPI()
+    register_error_handlers(app)
+
+    @app.get("/limited")
+    async def limited():
+        raise AppError(
+            code="rate_limit_exceeded_tokens",
+            message="Too many tokens.",
+            status_code=429,
+            headers={"Retry-After": "3"},
+        )
+
+    response = TestClient(app).get("/limited")
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "rate_limit_exceeded_tokens"
     assert response.headers["Retry-After"] == "3"

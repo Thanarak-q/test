@@ -21,8 +21,11 @@ def test_non_https_request_is_rejected():
         require_https(build_request("http"), ["10.0.0.10"])
 
     assert exc_info.value.status_code == 400
-    assert (
-        exc_info.value.detail == "HTTPS is required. Update your client to use https://"
+    # The revoke advice is the point: a request that arrived over HTTP has
+    # already leaked the key, so fixing the client alone is not enough.
+    assert exc_info.value.detail == (
+        "HTTPS is required. Update your client to use https:// and revoke this key, "
+        "as it was transmitted unencrypted."
     )
 
 

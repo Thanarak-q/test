@@ -7,13 +7,13 @@ api/
 ├── pyproject.toml            deps + ruff + pytest config (uv-managed)
 ├── alembic.ini · alembic/    migrations; env.py reads DATABASE_URL from app.config
 └── app/
-    ├── main.py               app assembly · CORS · error handlers · mounts /v1
+    ├── main.py               app assembly · CORS · error handlers · includes routers
     ├── config.py             pydantic-settings; missing env var fails at boot
     ├── db.py                 async engine · SessionLocal · Base · get_session
-    ├── redis.py               shared async client + get_redis dependency
+    ├── redis.py              get_redis → the lifespan-owned client on app.state
     ├── envelope.py           Envelope[T] · EnvelopeRoute · AppError · handlers
     ├── models.py             every ORM table imported here for autogenerate
-    ├── routers/{f}.py        HTTP only — no business logic
+    ├── routers/{f}.py        HTTP only · APIRouter(prefix="/v1/{f}", route_class=EnvelopeRoute)
     ├── services/{f}.py       the domain work; receives a session, owns the transaction
     ├── repos/{f}.py          async module functions, SQLAlchemy lives only here
     └── constants/
@@ -62,6 +62,6 @@ web/
 2. `alembic revision --autogenerate` — read the generated migration, MySQL autogenerate misses type changes.
 3. `api/app/repos/{domain}.py` — async functions, `session` first, scope by `user_id`, no commit.
 4. `api/app/services/{domain}.py` — the work, if it is more than one repo call.
-5. `api/app/routers/{domain}.py` — validate in, call the repo/service, return the DTO; the route class adds the envelope.
+5. `api/app/routers/{domain}.py` — `APIRouter(prefix="/v1/{domain}", route_class=EnvelopeRoute)`, then include it in `main.py`. Validate in, call the repo/service, return the DTO; the route class adds the envelope.
 6. `bun run gen:api` with the API running — never hand-write the response type in web.
 7. `web/src/pages/{page}/` — page folder with its own `hooks/`.

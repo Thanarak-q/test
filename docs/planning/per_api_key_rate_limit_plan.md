@@ -61,7 +61,7 @@ function นี้ไม่รับ `Request` ไม่อ่าน header แ�
 ### Bucket
 
 ```text
-rl:key:{user_id}   request count   cost = 1
+rl:req:{user_id}   request count   cost = 1
 rl:tok:{user_id}   token volume    cost = est_tokens
 ```
 
@@ -135,7 +135,7 @@ script ต้องทำตามลำดับ:
 
 ใช้ fake Redis สำหรับ unit test:
 
-- ผ่านทั้งสอง bucket: หักทั้งคู่ และ keys เป็น `rl:key:{user_id}`, `rl:tok:{user_id}`
+- ผ่านทั้งสอง bucket: หักทั้งคู่ และ keys เป็น `rl:req:{user_id}`, `rl:tok:{user_id}`
 - request bucket ไม่พอ: 429 และ `limit_type=request`
 - token bucket ไม่พอ: 429 และ `limit_type=token`
 - ไม่ผ่านทั้งคู่: `limit_type` ตาม precedence ที่กำหนด
@@ -160,7 +160,7 @@ integration test กับ Redis จริง: ยิง concurrent requests แ
 
 ### Bucket และ atomicity
 
-- [ ] ใช้ key `rl:key:{user_id}` และ `rl:tok:{user_id}`
+- [ ] ใช้ key `rl:req:{user_id}` และ `rl:tok:{user_id}`
 - [ ] Lua script เดียวรับ 2 KEYS
 - [ ] refill ด้วย `redis.call('TIME')`
 - [ ] ตรวจทั้งสอง bucket ก่อนหัก

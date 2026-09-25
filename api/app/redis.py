@@ -1,9 +1,9 @@
-from redis.asyncio import Redis, from_url
-
-from app.config import settings
-
-redis: Redis = from_url(settings.redis_url, decode_responses=True)
+from fastapi import Request
+from redis.asyncio import Redis
 
 
-async def get_redis() -> Redis:
-    return redis
+async def get_redis(request: Request) -> Redis:
+    # The client is created once in main.py's lifespan so it is opened and
+    # closed with the app. A second module-level client would hold its own
+    # pool that nothing ever closes.
+    return request.app.state.redis

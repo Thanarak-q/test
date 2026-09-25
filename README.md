@@ -7,6 +7,7 @@ api/    FastAPI · SQLAlchemy async · Alembic · MySQL
 web/    Vite · React 19 · TanStack Router + Query · Tailwind v4 · Bun runtime
 docs/   STRUCTURE.md (layout + pinned versions) · DECISIONS.md (why, and what failed)
         DB_PERMISSIONS.md (grants for the app's MySQL user) · planning/ (design notes)
+        HANDOFF.md (what is not done, and what the app owner must decide)
 ```
 
 ## Setup

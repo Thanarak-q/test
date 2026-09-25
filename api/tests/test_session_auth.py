@@ -12,8 +12,13 @@ from app.services.session_auth import (
 
 
 def config(**overrides) -> Settings:
+    # _env_file=None: a developer's .env (often with the dev override set)
+    # must not leak into what these tests assert.
     return Settings(
-        database_url="mysql://unused", redis_url="redis://unused", **overrides
+        _env_file=None,
+        database_url="mysql://unused",
+        redis_url="redis://unused",
+        **overrides,
     )
 
 

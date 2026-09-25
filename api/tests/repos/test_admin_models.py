@@ -47,6 +47,7 @@ async def test_admin_lists_every_model_including_disabled(as_role):
     assert [(m["name"], m["status"]) for m in response.json()["data"]] == [
         ("gpt-4.1", "disabled"),
         ("gpt-4o", "enabled"),
+        ("text-embedding-3-small", "enabled"),
     ]
 
 
@@ -96,7 +97,18 @@ async def test_public_list_needs_no_auth_and_shows_enabled_only(public, as_role)
 
     assert response.status_code == 200
     assert response.json()["data"] == [
-        {"name": "gpt-4o", "context_window": 128000, "max_output_tokens": 16384}
+        {
+            "name": "gpt-4o",
+            "kind": "chat",
+            "context_window": 128000,
+            "max_output_tokens": 16384,
+        },
+        {
+            "name": "text-embedding-3-small",
+            "kind": "embedding",
+            "context_window": 8191,
+            "max_output_tokens": 0,
+        },
     ]
 
 

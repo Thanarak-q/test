@@ -40,6 +40,7 @@ class ValidatedModel:
 
     model_id: int
     name: str
+    kind: str
     context_window: int
     max_output_tokens: int
     _proof: object = field(repr=False, compare=False, default=None)
@@ -59,6 +60,7 @@ def _issue(row: model_repo.ModelRow) -> ValidatedModel:
     return ValidatedModel(
         model_id=row.id,
         name=row.name,
+        kind=row.kind,
         context_window=row.context_window,
         max_output_tokens=row.max_output_tokens,
         _proof=_PROOF,
@@ -69,10 +71,14 @@ async def model_validate(
     redis: Redis,
     session_factory: async_sessionmaker[AsyncSession],
     raw_name: object,
+    *,
+    kind: str,
 ) -> ValidatedModel:
-    """The enabled model with exactly this name, or 400/403.
+    """The enabled model of this kind with exactly this name, or 400/403.
 
-    There is no default model: a request without one is a 400.
+    There is no default model: a request without one is a 400. A model of
+    the other kind is refused like an unknown one, so a chat model can never
+    reach /embeddings or the other way round.
     """
     if not isinstance(raw_name, str) or not raw_name.strip():
         raise AppError("llm_model_required", "`model` is required.", 400)
@@ -91,14 +97,14 @@ async def model_validate(
     if cached is not None:
         try:
             row = model_repo.ModelRow(**json.loads(cached))
-            if row.status == "enabled" and row.name == name:
+            if row.status == "enabled" and row.name == name and row.kind == kind:
                 return _issue(row)
         except (TypeError, ValueError):
             pass  # a corrupt entry is a miss
 
     async with session_factory() as session:
         row = await model_repo.get_by_name(session, name=name)
-    if row is None or row.status != "enabled":
+    if row is None or row.status != "enabled" or row.kind != kind:
         raise _not_allowed()
 
     if cache_ok:
@@ -124,7 +130,7 @@ async def get_enabled_by_id(
     """
     async with session_factory() as session:
         row = await model_repo.get_by_id(session, model_id=model.model_id)
-    if row is None or row.status != "enabled":
+    if row is None or row.status != "enabled" or row.kind != model.kind:
         raise _not_allowed()
     return row
 
@@ -132,6 +138,7 @@ async def get_enabled_by_id(
 @dataclass(frozen=True)
 class PublicModel:
     name: str
+    kind: str
     context_window: int
     max_output_tokens: int
 
@@ -154,6 +161,7 @@ async def list_public(
     models = [
         PublicModel(
             name=row.name,
+            kind=row.kind,
             context_window=row.context_window,
             max_output_tokens=row.max_output_tokens,
         )

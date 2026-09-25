@@ -27,8 +27,8 @@ def test_every_api_route_is_enveloped():
 
     assert api_routes  # the walker below broke if this finds nothing
     unwrapped = {r.path for r in api_routes if not isinstance(r, EnvelopeRoute)}
-    # The one exception: an OpenAI-compatible reply, or the SDKs cannot read it.
-    assert unwrapped == {"/v1/chat/completions"}
+    # The exceptions: OpenAI-compatible replies, or the SDKs cannot read them.
+    assert unwrapped == {"/v1/chat/completions", "/v1/embeddings"}
 
 
 def _api_routes(routes):

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from redis.asyncio import Redis
@@ -14,6 +16,7 @@ router = APIRouter(prefix="/v1/public", tags=["public"], route_class=EnvelopeRou
 
 class PublicModelResponse(BaseModel):
     name: str
+    kind: Literal["chat", "embedding"]
     context_window: int
     max_output_tokens: int
 
@@ -25,6 +28,7 @@ async def list_public_models(
     return [
         PublicModelResponse(
             name=model.name,
+            kind=model.kind,
             context_window=model.context_window,
             max_output_tokens=model.max_output_tokens,
         )

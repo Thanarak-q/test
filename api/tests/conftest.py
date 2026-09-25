@@ -102,14 +102,20 @@ async def db(_migrated_database):
             await session.execute(text(f"TRUNCATE TABLE {table}"))
         # The migration seeds the whitelist; tests may disable models or add
         # their own, so put it back to exactly the seed.
-        await session.execute(text("DELETE FROM llm_models WHERE id > 2"))
+        # By name, not id: the seeds come from more than one migration.
+        await session.execute(
+            text(
+                "DELETE FROM llm_models WHERE name NOT IN "
+                "('gpt-4o', 'gpt-4.1', 'text-embedding-3-small')"
+            )
+        )
         await session.execute(
             text(
                 "UPDATE llm_models SET status = 'enabled', "
                 "context_window = CASE name WHEN 'gpt-4o' THEN 128000 "
-                "ELSE 1047576 END, "
+                "WHEN 'text-embedding-3-small' THEN 8191 ELSE 1047576 END, "
                 "max_output_tokens = CASE name WHEN 'gpt-4o' THEN 16384 "
-                "ELSE 32768 END"
+                "WHEN 'text-embedding-3-small' THEN 0 ELSE 32768 END"
             )
         )
         await session.execute(text("SET FOREIGN_KEY_CHECKS = 1"))

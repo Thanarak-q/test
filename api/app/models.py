@@ -130,11 +130,14 @@ class LlmModel(Base):
         CheckConstraint(
             "status IN ('enabled', 'disabled')", name="ck_llm_models_status"
         ),
+        CheckConstraint("kind IN ('chat', 'embedding')", name="ck_llm_models_kind"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     # Matched exactly — never by prefix, substring or fuzzily.
     name: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    # Which endpoint may call it: /chat/completions or /embeddings.
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default="chat")
     # The model's total window. Deliberately not called max_tokens: in a chat
     # request max_tokens is the output cap, and sharing the name invites
     # setting the output cap to the whole window.

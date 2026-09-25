@@ -24,6 +24,7 @@ class ModelIdRequest(BaseModel):
 class AdminModelResponse(BaseModel):
     id: int
     name: str
+    kind: Literal["chat", "embedding"]
     context_window: int
     max_output_tokens: int
     status: Literal["enabled", "disabled"]
@@ -64,6 +65,7 @@ async def list_models(
         AdminModelResponse(
             id=row.id,
             name=row.name,
+            kind=row.kind,
             context_window=row.context_window,
             max_output_tokens=row.max_output_tokens,
             status=row.status,

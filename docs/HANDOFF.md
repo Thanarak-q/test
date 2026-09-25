@@ -193,7 +193,7 @@ log ทุกตัวเก็บเฉพาะ metadata **ไม่เก็�
 | ตรวจ session ของแอปหลัก                                   | ยังไม่ทำ            | รอคำตอบข้อ 1.1                                                                                                                                                            |
 | `POST /v1/embeddings`                                     | ยังไม่ทำ            | ไม่อยู่ใน spec แต่เอกสาร `/docs` มีหน้า reference ไว้แล้ว ต้องเลือกว่าจะทำหรือจะเอาหน้านั้นออก                                                                            |
 | `GET /v1/models`                                          | ยังไม่ทำ            | เหตุผลเดียวกัน OpenAI SDK บางตัวเรียก endpoint นี้                                                                                                                        |
-| streaming (`stream: true`)                                | ตั้งใจไม่ทำ         | ปฏิเสธด้วย 400 อย่างชัดเจน ถ้าจะทำต้องออกแบบการหัก quota และ timeout ใหม่                                                                                                 |
+| streaming (`stream: true`)                                | ทำแล้ว              | SSE แบบ OpenAI หัก quota ตามข้อความที่ส่งไปแล้วเมื่อ stream ถูกตัด ดู `docs/planning/chat_pipeline.md`                                                                    |
 | tools / function calling                                  | ตั้งใจไม่ทำ         | ปฏิเสธด้วย 400                                                                                                                                                            |
 | หน้า admin สำหรับจัดการ model                             | ทำแล้ว              | อยู่ที่ `/admin/models` **ยังไม่มีลิงก์ใน sidebar** เพราะ web ยังไม่รู้ role ของผู้ใช้จนกว่าจะต่อ session (ข้อ 1.1) คนที่ไม่ใช่ admin เปิดแล้วจะเห็นข้อความว่าเฉพาะ admin |
 | checkbox ยอมรับเรื่องส่งข้อมูลให้บุคคลที่สาม ตอนสร้าง key | ทำแล้ว              | บังคับแค่ฝั่งหน้าเว็บ backend ไม่ตรวจ (ตาม spec) ชื่อผู้ให้บริการดึงจาก `web/src/content/docs/values.ts`                                                                  |
@@ -263,7 +263,7 @@ uv run --directory api python -m app.jobs.quota_health
 
 ### 4.5 Metrics
 
-`GET /metrics` เป็นรูปแบบ Prometheus เปิดให้เฉพาะ localhost และ IP ใน `TRUSTED_PROXY_IPS`
+`GET /metrics` เป็นรูปแบบ Prometheus เปิดให้เฉพาะ localhost (ไม่เปิดให้ proxy เพราะ request ที่ proxy ส่งต่อมาจะมี IP ของ proxy ไม่ว่าใครเป็นคนส่ง) Prometheus ต้อง scrape จากเครื่องเดียวกัน
 ตัวที่ควรตั้ง dashboard และ alert:
 
 | metric                                                  | ดูอะไร                                                                      |

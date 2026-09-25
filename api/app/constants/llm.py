@@ -6,8 +6,8 @@ docs/planning/chat_pipeline.md; change them together with it."""
 POLICY_CAP = 4_096
 
 # Unsupported request parameters are rejected, never ignored: an ignored
-# `stream: true` leaves the SDK waiting for chunks that never come.
-UNSUPPORTED_PARAMS = ("stream", "tools", "functions", "tool_choice", "function_call")
+# parameter silently changes what the caller gets back.
+UNSUPPORTED_PARAMS = ("tools", "functions", "tool_choice", "function_call")
 
 # Roles a caller may send. `system` is allowed because RAG needs it; the API
 # itself never adds a system instruction.
@@ -24,6 +24,10 @@ PROVIDER_CONNECT_TIMEOUT_SECONDS = 5.0
 PROVIDER_READ_TIMEOUT_SECONDS = 120.0
 PROVIDER_WRITE_TIMEOUT_SECONDS = 10.0
 
+# A streamed reply resets the read timeout on every chunk, so it needs its own
+# ceiling on total length: the quota reservation must outlive it (see below).
+STREAM_MAX_SECONDS = 120.0
+
 # A chat reply is kilobytes. Anything this large is a broken or hostile
 # upstream; abort rather than buffer it.
 MAX_PROVIDER_RESPONSE_BYTES = 10 * 1024 * 1024
@@ -37,7 +41,9 @@ PUBLIC_MODELS_CACHE_KEY = "model:public"
 # 2x, or it could expire mid-call and let the user overspend.
 QUOTA_RESERVATION_TTL_SECONDS = 300
 QUOTA_RESERVATION_KEY_TTL_SECONDS = 600
-if QUOTA_RESERVATION_TTL_SECONDS < 2 * PROVIDER_READ_TIMEOUT_SECONDS:
+if QUOTA_RESERVATION_TTL_SECONDS < 2 * max(
+    PROVIDER_READ_TIMEOUT_SECONDS, STREAM_MAX_SECONDS
+):
     raise RuntimeError("quota reservations must outlive 2x the provider read timeout")
 
 # Idempotency-Key replay window; matches the reservation window.
@@ -54,3 +60,7 @@ CACHE_INVALIDATION_ATTEMPTS = 3
 # The whole request body. A full prompt at the input limit is well under
 # 100KB even in Thai; this refuses absurd bodies before they are parsed.
 MAX_REQUEST_BODY_BYTES = 1024 * 1024
+
+# /v1/embeddings: most strings in one request. Bounds the provider's reply
+# (one vector per input) well under MAX_PROVIDER_RESPONSE_BYTES.
+MAX_EMBEDDING_INPUTS = 256

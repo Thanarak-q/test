@@ -16,9 +16,9 @@ func chat(request, body) -> response
     -> {user_id, key_id}
     refund_pre_auth_token(client_ip)
  4. reject unsupported params                  -> 400
-    - stream=true, tools, functions, n>1
+    - tools, functions, n>1
     - ปฏิเสธชัด ๆ ไม่ใช่ ignore
-      stream ที่ถูก ignore จะทำให้ SDK รอ chunk ที่ไม่มีวันมา
+    - stream=true รองรับแล้ว (ดู Step 10–11 แบบ stream ด้านล่าง)
  5. model_validate(body.model)                 -> 403      ← ย้ายขึ้น
     -> {model_id, context_window, max_output}
     - ถูกกว่า rate limit (cache hit เกือบตลอด)
@@ -290,11 +290,25 @@ Where the code had to interpret the spec:
   4–11) → `services/model_catalogue.py`, `services/quota.py`, `services/provider.py`,
   `services/tokens.py`. Steps 0–3 are the `require_api_key` dependency, which runs
   before the body is read.
-- **Step 4.** `stream: false` and `n: 1` (what the OpenAI SDKs may send by default)
-  are accepted; anything else in `stream`/`n`, and `tools`, `functions`,
-  `tool_choice`, `function_call`, or any unknown field, is a 400
-  `llm_unsupported_parameter` naming it. Only `model`, `messages`, `max_tokens`,
-  `temperature` (0–2) and `top_p` (0–1) reach the provider.
+- **Step 4.** `n: 1` (what the OpenAI SDKs may send by default) is accepted;
+  anything else in `n`, and `tools`, `functions`, `tool_choice`, `function_call`,
+  or any unknown field, is a 400 `llm_unsupported_parameter` naming it. Only
+  `model`, `messages`, `max_tokens`, `temperature` (0–2) and `top_p` (0–1) reach
+  the provider. `stream` (bool) and `stream_options.include_usage` pick the reply
+  format; `stream_options` without `stream: true` is a 400.
+- **Streaming (Steps 10–11 with `stream: true`).** `provider.open_llm_stream`
+  runs every check, the replay lookup, the concurrency cap, the connection and
+  the provider status check before the response starts, so all of those still
+  answer with a normal status and envelope. After that the reply is
+  `text/event-stream` in OpenAI `chat.completion.chunk` format, ending in
+  `data: [DONE]`. A failure mid-stream sends one `data: {"error": {code, message}}`
+  event and ends without `[DONE]`. Quota is settled in the generator's shielded
+  `finally`: the validated total if the reply finished; if it did not
+  (provider failure or client hang-up), the prompt estimate ×1.1 plus the text
+  already produced, or nothing if no text came back. A stream is cut at
+  `STREAM_MAX_SECONDS` (120s) so the quota reservation (300s) always outlives it.
+  An Idempotency-Key replay is sent as a single content chunk; streamed and plain
+  requests share replays.
 - **model_validate.** The table is `llm_models` (`max_output_tokens`, `status`
   enabled/disabled). Names match with `BINARY` because the collation is
   case-insensitive. The hash TTL is set with `EXPIRE … NX`, so it runs from the

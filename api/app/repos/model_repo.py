@@ -17,6 +17,7 @@ from app.db import UtcDateTime
 class ModelRow:
     id: int
     name: str
+    kind: str
     context_window: int
     max_output_tokens: int
     status: str
@@ -28,7 +29,7 @@ _utc = UtcDateTime()
 # match "gpt-4o" — the whitelist is an exact list.
 _GET_BY_NAME = text(
     """
-    SELECT id, name, context_window, max_output_tokens, status
+    SELECT id, name, kind, context_window, max_output_tokens, status
     FROM llm_models
     WHERE name = BINARY :name
     """
@@ -42,7 +43,7 @@ async def get_by_name(session: AsyncSession, *, name: str) -> ModelRow | None:
 
 _GET_BY_ID = text(
     """
-    SELECT id, name, context_window, max_output_tokens, status
+    SELECT id, name, kind, context_window, max_output_tokens, status
     FROM llm_models
     WHERE id = :model_id
     """
@@ -75,7 +76,7 @@ async def set_status(
 
 _LIST_ALL = text(
     """
-    SELECT id, name, context_window, max_output_tokens, status
+    SELECT id, name, kind, context_window, max_output_tokens, status
     FROM llm_models
     ORDER BY name
     """
@@ -90,7 +91,7 @@ async def list_all(session: AsyncSession) -> list[ModelRow]:
 
 _LIST_ENABLED = text(
     """
-    SELECT id, name, context_window, max_output_tokens, status
+    SELECT id, name, kind, context_window, max_output_tokens, status
     FROM llm_models
     WHERE status = 'enabled'
     ORDER BY name

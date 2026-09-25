@@ -38,6 +38,24 @@ async def test_admin_can_disable_and_enable(as_role):
     assert disabled.status_code == enabled.status_code == 200
 
 
+async def test_admin_lists_every_model_including_disabled(as_role):
+    await as_role("/v1/admin/models/disable", "admin", {"id": 2})
+
+    response = await as_role("/v1/admin/models/list", "admin", {})
+
+    assert response.status_code == 200
+    assert [(m["name"], m["status"]) for m in response.json()["data"]] == [
+        ("gpt-4.1", "disabled"),
+        ("gpt-4o", "enabled"),
+    ]
+
+
+async def test_a_user_cannot_list(as_role):
+    response = await as_role("/v1/admin/models/list", "user", {})
+
+    assert response.status_code == 403
+
+
 async def test_a_user_cannot(as_role):
     response = await as_role("/v1/admin/models/disable", "user", {"id": 1})
 

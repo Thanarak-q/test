@@ -71,3 +71,18 @@ async def set_status(
         _SET_STATUS, {"model_id": model_id, "status": status, "at": at}
     )
     return result.rowcount == 1
+
+
+_LIST_ALL = text(
+    """
+    SELECT id, name, context_window, max_output_tokens, status
+    FROM llm_models
+    ORDER BY name
+    """
+)
+
+
+async def list_all(session: AsyncSession) -> list[ModelRow]:
+    """Every model, enabled or not — for admins."""
+    rows = await session.execute(_LIST_ALL)
+    return [ModelRow(**row) for row in rows.mappings()]

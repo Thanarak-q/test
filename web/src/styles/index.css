@@ -1302,6 +1302,26 @@ main:focus {
   padding-bottom: 0;
 }
 
+.consent-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.consent-check input {
+  margin-top: 2px;
+  accent-color: var(--foreground);
+}
+.consent-check a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* Docs — public documentation. Same tokens as the dashboard. */
 .docs {
   display: grid;

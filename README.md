@@ -15,7 +15,7 @@ docs/   STRUCTURE.md (layout + pinned versions) · DECISIONS.md (why, and what f
 ```bash
 bun install                      # root tooling + web deps
 uv sync --directory api --all-groups
-cp api/.env.example api/.env
+cp api/.env.example api/.env    # staging/production: api/.env.production.example
 cp web/.env.example web/.env
 docker compose up -d             # MySQL on :3310, Redis on :6389
 uv run --directory api alembic upgrade head

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiKeysRouteImport } from './routes/api-keys'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as UsageRouteImport } from './routes/usage'
+import { Route as AdminModelsRouteImport } from './routes/admin/models'
 import { Route as DocsIndexRouteImport } from './routes/docs/index'
 import { Route as DocsSplatRouteImport } from './routes/docs/$'
 
@@ -36,6 +37,11 @@ const UsageRoute = UsageRouteImport.update({
   path: '/usage',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminModelsRoute = AdminModelsRouteImport.update({
+  id: '/admin/models',
+  path: '/admin/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocsIndexRoute = DocsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/api-keys': typeof ApiKeysRoute
   '/docs': typeof DocsRouteWithChildren
   '/usage': typeof UsageRoute
+  '/admin/models': typeof AdminModelsRoute
   '/docs/$': typeof DocsSplatRoute
   '/docs/': typeof DocsIndexRoute
 }
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api-keys': typeof ApiKeysRoute
   '/usage': typeof UsageRoute
+  '/admin/models': typeof AdminModelsRoute
   '/docs/$': typeof DocsSplatRoute
   '/docs': typeof DocsIndexRoute
 }
@@ -68,15 +76,31 @@ export interface FileRoutesById {
   '/api-keys': typeof ApiKeysRoute
   '/docs': typeof DocsRouteWithChildren
   '/usage': typeof UsageRoute
+  '/admin/models': typeof AdminModelsRoute
   '/docs/$': typeof DocsSplatRoute
   '/docs/': typeof DocsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api-keys' | '/docs' | '/usage' | '/docs/$' | '/docs/'
+  fullPaths:
+    | '/'
+    | '/api-keys'
+    | '/docs'
+    | '/usage'
+    | '/admin/models'
+    | '/docs/$'
+    | '/docs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api-keys' | '/usage' | '/docs/$' | '/docs'
-  id: '__root__' | '/' | '/api-keys' | '/docs' | '/usage' | '/docs/$' | '/docs/'
+  to: '/' | '/api-keys' | '/usage' | '/admin/models' | '/docs/$' | '/docs'
+  id:
+    | '__root__'
+    | '/'
+    | '/api-keys'
+    | '/docs'
+    | '/usage'
+    | '/admin/models'
+    | '/docs/$'
+    | '/docs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -84,6 +108,7 @@ export interface RootRouteChildren {
   ApiKeysRoute: typeof ApiKeysRoute
   DocsRoute: typeof DocsRouteWithChildren
   UsageRoute: typeof UsageRoute
+  AdminModelsRoute: typeof AdminModelsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -114,6 +139,13 @@ declare module '@tanstack/react-router' {
       path: '/usage'
       fullPath: '/usage'
       preLoaderRoute: typeof UsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/models': {
+      id: '/admin/models'
+      path: '/admin/models'
+      fullPath: '/admin/models'
+      preLoaderRoute: typeof AdminModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs/': {
@@ -150,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiKeysRoute: ApiKeysRoute,
   DocsRoute: DocsRouteWithChildren,
   UsageRoute: UsageRoute,
+  AdminModelsRoute: AdminModelsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -16,6 +16,7 @@ export default defineConfig({
           // Every key route is POST so no key id travels in a URL, but listing
           // is a read: generate it as a query so it caches and refetches.
           listApiKeys: { query: { useQuery: true, useMutation: false } },
+          listModels: { query: { useQuery: true, useMutation: false } },
         },
       },
     },

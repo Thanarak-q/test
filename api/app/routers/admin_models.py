@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict
 from redis.asyncio import Redis
@@ -17,6 +19,14 @@ router = APIRouter(prefix="/v1/admin/models", tags=["admin"], route_class=Envelo
 class ModelIdRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: int
+
+
+class AdminModelResponse(BaseModel):
+    id: int
+    name: str
+    context_window: int
+    max_output_tokens: int
+    status: Literal["enabled", "disabled"]
 
 
 class ModelChangeResponse(BaseModel):
@@ -43,6 +53,23 @@ async def _set_status(
         request_id=getattr(request.state, "request_id", None),
     )
     return ModelChangeResponse()
+
+
+@router.post("/list", operation_id="listModels")
+async def list_models(
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_unbegun_session),
+) -> list[AdminModelResponse]:
+    return [
+        AdminModelResponse(
+            id=row.id,
+            name=row.name,
+            context_window=row.context_window,
+            max_output_tokens=row.max_output_tokens,
+            status=row.status,
+        )
+        for row in await model_catalogue.list_models(session, principal=principal)
+    ]
 
 
 @router.post("/enable", operation_id="enableModel")

@@ -11,6 +11,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { Mascot } from "@/components/ui/mascot";
 import { PageState, previewSchema, type PreviewState } from "@/components/ui/page-state";
+import { docsValues } from "@/content/docs/values";
 import { formatDate } from "@/utils/format";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
@@ -63,6 +64,9 @@ const useRefreshKeys = () => {
 export const CreateKeyDialog = ({ onClose }: { onClose: () => void }) => {
   const refreshKeys = useRefreshKeys();
   const [name, setName] = useState("");
+  // UX only, per the spec: the backend does not enforce it, because a caller
+  // using the API directly has read the same notice in the docs.
+  const [consented, setConsented] = useState(false);
   // The full key lives here, in component state, and nowhere else: never in a
   // store, the query cache, the URL, or browser storage.
   const [secret, setSecret] = useState("");
@@ -139,6 +143,7 @@ export const CreateKeyDialog = ({ onClose }: { onClose: () => void }) => {
       setError(nameError);
       return;
     }
+    if (!consented) return;
     interrupted.current = false;
     setPending(true);
     setError("");
@@ -309,6 +314,22 @@ export const CreateKeyDialog = ({ onClose }: { onClose: () => void }) => {
             <LockKeyhole />
             <span>The full key is shown once, right after it is created.</span>
           </div>
+          <label className="consent-check">
+            <input
+              type="checkbox"
+              checked={consented}
+              onChange={(event) => setConsented(event.target.checked)}
+              disabled={pending}
+            />
+            <span>
+              I understand that prompts and replies sent with this key are processed by{" "}
+              {docsValues.providerName}. If I build for other people, telling them is my
+              responsibility.{" "}
+              <Link to="/docs/$" params={{ _splat: "data-and-privacy" }}>
+                Data &amp; privacy
+              </Link>
+            </span>
+          </label>
           {error && (
             <p className="form-error" role="alert">
               {error}
@@ -326,7 +347,7 @@ export const CreateKeyDialog = ({ onClose }: { onClose: () => void }) => {
             <button
               className="button button-primary"
               type="submit"
-              disabled={Boolean(nameError) || pending}
+              disabled={Boolean(nameError) || !consented || pending}
               aria-busy={pending}
             >
               Create secret key

@@ -64,6 +64,7 @@ const createKey = async (name = "Integration test") => {
   const onClose = vi.fn();
   wrap(<CreateKeyDialog onClose={onClose} />);
   fireEvent.change(screen.getByLabelText("Name"), { target: { value: name } });
+  fireEvent.click(screen.getByRole("checkbox"));
   fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
   await flush();
   return { onClose };
@@ -100,6 +101,8 @@ describe("API key dialogs", () => {
 
     expect(submit).toBeDisabled();
     fireEvent.change(input, { target: { value: "  Integration test  " } });
+    expect(submit).toBeDisabled(); // not until the notice is acknowledged
+    fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(submit);
     expect(submit).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
@@ -163,6 +166,7 @@ describe("API key dialogs", () => {
     api.createApiKey.mockReturnValue(new Promise((done) => (resolve = done)));
     wrap(<CreateKeyDialog onClose={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Interrupted" } });
+    fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
     fireEvent(window, new Event("pagehide"));
     resolve({ id: KEY_ID, key: SECRET_KEY, key_prefix: PREFIX });
@@ -186,6 +190,13 @@ describe("API key dialogs", () => {
     expect(api.deleteApiKey).toHaveBeenLastCalledWith({ id: KEY_ID });
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(document.body).not.toHaveTextContent(SECRET_KEY);
+  });
+
+  it("names the provider in the consent notice and links the privacy page", () => {
+    wrap(<CreateKeyDialog onClose={vi.fn()} />);
+
+    expect(screen.getByRole("checkbox").closest("label")).toHaveTextContent("processed by OpenAI");
+    expect(screen.getByRole("link", { name: /Data & privacy/ })).toBeInTheDocument();
   });
 
   it("shows the server's message when the key limit is reached", async () => {

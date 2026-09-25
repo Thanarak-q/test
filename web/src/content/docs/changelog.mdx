@@ -9,10 +9,21 @@ Entries are dated by when the change takes effect.
 - Request and token rate limits, each with its own response headers.
 - An `X-Request-Id` header on every response.
 - This documentation.
+- `POST /v1/chat/completions`, compatible with the OpenAI SDKs (non-streaming).
+- `Idempotency-Key` on chat requests: a retry with the same key returns the first
+  reply instead of calling the model again.
+- A token quota shared between API keys and the Mathew AI web app. Requests over it
+  are refused with `llm_quota_exceeded`; remaining quota is shown on the Usage page.
+- A model list managed by admins, with a Models page for enabling and disabling
+  models.
+- A notice to acknowledge when creating a key: prompts are processed by the model
+  provider.
 
 ### Changed
 
 - Error responses name which rate limit was reached.
+- Chat errors use `llm_*` codes, listed on [Errors](/docs/errors).
+- Key management requests are rate limited per account.
 
 ### Deprecated
 
@@ -22,3 +33,5 @@ Entries are dated by when the change takes effect.
 
 - Improved ownership checks on key management.
 - Plain-HTTP requests are rejected with advice to revoke the key they carried.
+- Unsupported request parameters are refused by name instead of being ignored.
+- Provider errors are no longer passed through to callers.

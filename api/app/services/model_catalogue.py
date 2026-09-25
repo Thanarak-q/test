@@ -125,6 +125,15 @@ async def get_enabled_by_id(
     return row
 
 
+async def list_models(
+    session: AsyncSession, *, principal: Principal
+) -> list[model_repo.ModelRow]:
+    """The whole whitelist, disabled models included. Admin only."""
+    ensure_admin(principal)
+    async with session.begin():
+        return await model_repo.list_all(session)
+
+
 async def manage_model(
     session: AsyncSession,
     redis: Redis,

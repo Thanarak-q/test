@@ -5,6 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminModelResponse';
+export * from './adminModelResponseStatus';
 export * from './createdKeyResponse';
 export * from './createKeyRequest';
 export * from './dailyUsageResponse';

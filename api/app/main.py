@@ -181,10 +181,11 @@ app.include_router(public_models.router)
 @app.get("/metrics", include_in_schema=False)
 async def metrics(request: Request) -> Response:
     """Prometheus scrape endpoint. Operational, like /health: unversioned and
-    unenveloped. Served only to localhost and the trusted proxy — never to
-    the public, since counts of outcomes and limits help someone probing."""
+    unenveloped. Served only to a scraper on the same host — never to the
+    public, since counts of outcomes and limits help someone probing. The
+    trusted proxy is deliberately not allowed: a request it forwards carries
+    its IP whoever sent it, so allowing it would open this to everyone."""
     peer = request.client.host if request.client else None
-    allowed = {"127.0.0.1", "::1"} | request.app.state.trusted_proxies
-    if peer not in allowed:
+    if peer not in ("127.0.0.1", "::1"):
         return Response(status_code=404)
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

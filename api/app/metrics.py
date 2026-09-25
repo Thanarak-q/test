@@ -1,6 +1,6 @@
 """Prometheus metrics for the chat pipeline (docs/planning/chat_pipeline.md).
 
-Served at /metrics to the trusted proxy and localhost only; see main.py.
+Served at /metrics to localhost only; see main.py.
 """
 
 from prometheus_client import Counter, Gauge, Histogram

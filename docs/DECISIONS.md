@@ -107,6 +107,78 @@ comes from a verified session or a verified key record, nothing else.
 layer they were meant to be is `app/repos/`, which arrives with real code in Phase 2
 rather than as empty placeholders.
 
+## 2026-09-25 — API key feature (phases 1–6 of `CLAUDE_CODE_BRIEF.md`)
+
+**One migration, matching the ORM.** The old migration never created `identity_*`
+and described a different `llm_models`. Replaced by `20260925_schema`; `alembic check`
+is clean against it. Databases built from the old migration must be recreated.
+
+**`UtcDateTime` is the one place zones are handled on the way to and from MySQL.**
+`DATETIME` has no zone and the driver returns naive values, which `validate_api_key`
+rightly rejects. The column type refuses naive writes, stores UTC, and tags reads UTC.
+`DATETIME(6)` so "newest first" is stable. No server-side time defaults: `NOW()`
+follows the session zone, so the app sets every timestamp (and pins the session to
+`+00:00` anyway).
+
+**`llm_models.max_tokens` → `context_window`.** In a chat request `max_tokens` is the
+output cap; sharing the name invites setting the output cap to the whole window.
+
+**Auth failures get their own table, `identity_auth_failure_logs`.** The key id comes
+from an unauthenticated caller: it may not exist, so it cannot carry a `user_id` or
+FK, and an attacker controls the write rate. Key lifecycle events stay in
+`identity_api_key_audit_logs`, now with `target_id`.
+
+**`SqlFailureAudit` commits its own transaction.** The one repo adapter that does: a
+failed authentication raises 401, which rolls back the request transaction, so a row
+written there would never land.
+
+**Redis repos never return `None` on `RedisError`.** `None` means "not cached", so the
+caller would fall through to MySQL on every request — fail-open disguised as a miss.
+`tests/repos/test_fail_closed.py` runs against an unreachable real Redis and fails if
+any cache method swallows the error, or if MySQL is touched.
+
+**Key creation: per-user row lock, then one conditional `INSERT … SELECT`.** The
+count-and-insert is one statement, but on its own it deadlocks under concurrency: each
+transaction takes shared gap locks, then each waits on the other's to insert (verified
+— the concurrency test fails with MySQL error 1213 without the lock). Locking the
+user's `identity_users` row first (`INSERT … ON DUPLICATE KEY UPDATE`, which also
+creates the mirror row) serialises creates per user. Ten concurrent creates at 4/5
+yield exactly one success.
+
+**Key management services own their transaction** (`get_unbegun_session`). Revoke and
+delete must invalidate `auth:{key_id}` _after_ the new status is committed; otherwise
+a concurrent lookup could read the old status and re-cache it. The idempotent path
+invalidates too, so retrying a revoke whose invalidation failed actually helps.
+
+**Revoke/delete are idempotent; audit only on change.** Revoking a deleted key is 404,
+the same 404 as someone else's key and a key that never existed (byte-identical body
+and headers, tested).
+
+**Request bodies forbid extra fields.** A body carrying `user_id` is a 422, not
+silently ignored.
+
+**Session auth fails closed until the main app's session is known.**
+`_verify_main_app_session` returns nothing (`TODO(session)`, open question 1), so every
+dashboard request is 401 except under the dev override: `ENV=dev` plus
+`DEV_SESSION_USER_ID`. `ENV` defaults to `production`, startup refuses the override
+outside dev, and the override is re-checked per request. CORS still disallows
+credentials; revisit once the session mechanism is known.
+
+**Usage lives in a dashboard module and resolves dates in the API.** "Last N days"
+is a `days` parameter, not dates computed in the browser, so "today" is always Asia/
+Bangkok's. SQL groups by UTC hour; Python buckets hours into Bangkok days. Ranges are
+clamped to the 60-day retention window. Remaining quota is returned here only.
+
+**Web: generated client over axios.** orval 8 defaults to a fetch client whose
+signature does not match the axios mutator; `httpClient: "axios"` keeps one transport.
+`listApiKeys` is POST (no key ids in URLs) but generated as a query. The mutator throws
+`ApiError` with the envelope's `code`, so the UI can tell "revocation pending" (500)
+from other failures and never shows it as success.
+
+**`key_prefix` comes from the API.** The demo's `getDemoKeyPrefix` sliced characters
+off the secret for display — that leaked part of it. The prefix is now
+`mthw01_{key_id}`, built server-side, containing nothing of the secret.
+
 ## Out of scope until asked
 
 - Multi-user, workspaces, invitations. `user_id` columns exist so adding it later is a
@@ -118,4 +190,9 @@ rather than as empty placeholders.
 
 ## Tried and did not work
 
-_(nothing yet — record dead ends here so the next session does not repeat them)_
+**`gen:api` fails with `Cannot find module 'ajv/dist/core'`.** bun hoists
+`ajv-draft-04` (from orval's `@scalar/openapi-parser`) to the root, next to eslint's
+ajv 6, but it needs ajv 8. Local workaround, not committed:
+`ln -sfn ../../@scalar/openapi-parser/node_modules/ajv node_modules/ajv-draft-04/node_modules/ajv`.
+Proper fix is still open (an isolated linker, or an override once bun supports
+nested ones).

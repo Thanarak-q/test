@@ -9,15 +9,16 @@ api/
 └── app/
     ├── main.py               app assembly · CORS · error handlers · includes routers
     ├── config.py             pydantic-settings; missing env var fails at boot
-    ├── db.py                 async engine · SessionLocal · Base · get_session
+    ├── db.py                 engine · SessionLocal · Base · UtcDateTime · get_session / get_unbegun_session
     ├── redis.py              get_redis → the lifespan-owned client on app.state
     ├── envelope.py           Envelope[T] · EnvelopeRoute · AppError · handlers
     ├── models.py             every ORM table imported here for autogenerate
+    ├── dependencies.py       require_api_key (public API) · get_current_user (dashboard session)
     ├── routers/{f}.py        HTTP only · APIRouter(prefix="/v1/{f}", route_class=EnvelopeRoute)
     ├── services/{f}.py       the domain work; receives a session, owns the transaction
     ├── repos/{f}.py          async module functions, SQLAlchemy lives only here
     └── constants/
-tests/                        pytest, asyncio_mode=auto
+tests/                        pytest, asyncio_mode=auto · tests/repos/ = real MySQL + Redis
 
 web/
 ├── vite.config.ts            router plugin · react · tailwind · react-compiler
@@ -25,10 +26,9 @@ web/
 └── src/
     ├── routes/               file-based, thin; TanStack Router generates routeTree.gen.ts
     ├── pages/{page}/         the feature: index.tsx · hooks/ · components/
-    ├── services/{X}Service/  index.ts + types/{XRequest,XResponse}.ts
-    ├── api/mutator.ts        orval's axios adapter (unwraps the envelope)
-    ├── utils/AxiosUtil.ts    shared instance + typed get/post/patch/delete
-    ├── consts/queryKeys.ts   query key factory
+    ├── api/generated/        orval output — hooks, types, query keys; never hand-edited
+    ├── api/mutator.ts        orval's axios adapter: unwraps the envelope, throws ApiError(code)
+    ├── utils/AxiosUtil.ts    shared axios instance (bare origin; paths carry /v1)
     ├── stores/               nanostores
     ├── components/{ui,layout}/
     └── styles/index.css      Tailwind v4 entry + theme tokens
@@ -63,5 +63,5 @@ web/
 3. `api/app/repos/{domain}.py` — async functions, `session` first, scope by `user_id`, no commit.
 4. `api/app/services/{domain}.py` — the work, if it is more than one repo call.
 5. `api/app/routers/{domain}.py` — `APIRouter(prefix="/v1/{domain}", route_class=EnvelopeRoute)`, then include it in `main.py`. Validate in, call the repo/service, return the DTO; the route class adds the envelope.
-6. `bun run gen:api` with the API running — never hand-write the response type in web.
+6. `bun run --cwd web gen:api` with the API running — never hand-write the response type in web.
 7. `web/src/pages/{page}/` — page folder with its own `hooks/`.

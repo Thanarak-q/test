@@ -28,11 +28,9 @@ export default tseslint.config(
     },
   },
   {
-    files: [
-      "src/pages/api-keys/**/*.{ts,tsx}",
-      "src/stores/demo.ts",
-      "src/components/ui/dialog.tsx",
-    ],
+    // Key management handles a secret shown once: nothing in these files may
+    // persist it. Scoped here because stores/theme.ts persists legitimately.
+    files: ["src/pages/api-keys/**/*.{ts,tsx}", "src/components/ui/dialog.tsx"],
     rules: {
       "no-restricted-globals": ["error", "localStorage", "sessionStorage", "indexedDB"],
       "no-restricted-imports": [

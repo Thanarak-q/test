@@ -1,8 +1,6 @@
-import { resetDemoKeys } from "@/stores/demo";
 import { Link, Outlet } from "@tanstack/react-router";
-import { ChartNoAxesCombined, KeyRound, Menu, RotateCcw, X } from "lucide-react";
+import { ChartNoAxesCombined, KeyRound, Menu, X } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { toast } from "sonner";
 
 const Navigation = ({ onNavigate }: { onNavigate?: () => void }) => (
   <nav className="navigation" aria-label="Main navigation">
@@ -25,26 +23,6 @@ const Navigation = ({ onNavigate }: { onNavigate?: () => void }) => (
       Usage
     </Link>
   </nav>
-);
-
-const DemoNotice = () => (
-  <div className="demo-notice">
-    <div className="demo-notice-title">
-      <span className="demo-dot" />
-      Demo workspace
-    </div>
-    <p>Sample data. Keys created here won’t access the Mathew AI API.</p>
-    <button
-      className="text-button"
-      onClick={() => {
-        resetDemoKeys();
-        toast.success("Demo keys reset");
-      }}
-    >
-      <RotateCcw />
-      Reset demo keys
-    </button>
-  </div>
 );
 
 export const Dashboard = () => {
@@ -73,11 +51,13 @@ export const Dashboard = () => {
         <div className="workspace-label">Your workspace</div>
         <Navigation />
         <div className="sidebar-bottom">
-          <DemoNotice />
+          {/* TODO(session): show the signed-in user from the main application. */}
           <div className="account">
-            <span className="avatar">D</span>
+            <span className="avatar" aria-hidden="true">
+              <KeyRound />
+            </span>
             <div>
-              Demo customer<span>Personal account</span>
+              Your account<span>Personal account</span>
             </div>
           </div>
         </div>
@@ -92,7 +72,6 @@ export const Dashboard = () => {
             <Menu />
           </button>
           <span>Mathew AI</span>
-          <span className="demo-badge">Demo</span>
         </div>
         <main id="main-content" tabIndex={-1}>
           <Outlet />
@@ -110,9 +89,6 @@ export const Dashboard = () => {
           </button>
         </div>
         <Navigation onNavigate={() => drawer.current?.close()} />
-        <div className="sidebar-bottom">
-          <DemoNotice />
-        </div>
       </dialog>
     </div>
   );

@@ -77,3 +77,20 @@ def _untrusted_request() -> HTTPException:
     reached, which helps nobody except someone probing it.
     """
     return HTTPException(status_code=400, detail=UNTRUSTED_REQUEST_MESSAGE)
+
+
+def best_effort_client_ip(request: Request, trusted_proxies: frozenset[str]) -> str:
+    """The caller's IP for audit rows on session-authenticated endpoints.
+
+    X-Real-IP is used only when the peer is a trusted proxy, so a caller
+    cannot write an arbitrary address into the audit log; otherwise the peer
+    address itself. Unlike get_client_ip this never rejects: dashboard calls
+    are authenticated by the session, not gated on the proxy.
+    """
+    peer = request.client.host if request.client else "unknown"
+    if peer in trusted_proxies:
+        try:
+            return str(ipaddress.ip_address(request.headers.get("X-Real-IP", "")))
+        except ValueError:
+            pass
+    return peer

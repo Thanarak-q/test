@@ -2,14 +2,10 @@
 
 The stub tests pin the Python side; only a real server proves the script
 itself returns what the Python side unpacks. Uses the compose Redis
-(`docker compose up redis`); skipped when it is not running.
+(`docker compose up redis`); see conftest for when it skips.
 """
 
-import os
-
 import pytest
-from redis.asyncio import Redis
-from redis.exceptions import RedisError
 
 from app.constants.perkey_rate_limit import (
     RATE_LIMIT_CAPACITY,
@@ -18,22 +14,7 @@ from app.constants.perkey_rate_limit import (
 from app.envelope import AppError
 from app.services.perkey_rate_limit import perkey_rate_limit
 
-TEST_REDIS_URL = os.environ.get("TEST_REDIS_URL", "redis://localhost:6389/15")
 USER_ID = 424242
-
-
-@pytest.fixture
-async def redis():
-    client = Redis.from_url(TEST_REDIS_URL, decode_responses=True)
-    try:
-        await client.ping()
-    except RedisError:
-        await client.aclose()
-        pytest.skip(f"no Redis at {TEST_REDIS_URL}")
-    await client.delete(f"rl:req:{USER_ID}", f"rl:tok:{USER_ID}")
-    yield client
-    await client.delete(f"rl:req:{USER_ID}", f"rl:tok:{USER_ID}")
-    await client.aclose()
 
 
 async def test_allowed_request_reports_each_bucket_separately(redis):

@@ -60,7 +60,7 @@ class FakeDatabase:
         self.queries.append((key_id, timeout_seconds))
         return self.record
 
-    async def update_last_used(self, key_id, at):
+    async def update_last_used(self, key_id, *, user_id, at):
         if self.error:
             raise self.error
         self.last_used_updates.append((key_id, at))

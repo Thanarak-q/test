@@ -1,7 +1,10 @@
+import { useListApiKeys } from "@/api/generated/api-keys/api-keys";
+import { useGetUsage } from "@/api/generated/dashboard/dashboard";
+import type { DailyUsageResponse } from "@/api/generated/model";
+import { isApiError } from "@/api/mutator";
 import { FilterSelect } from "@/components/ui/filter-select";
-import { PageState, previewSchema } from "@/components/ui/page-state";
-import { $demoHasUsage, $demoKeys, formatDate, formatNumber, getDemoUsage } from "@/stores/demo";
-import { useStore } from "@nanostores/react";
+import { PageState, previewSchema, type PreviewState } from "@/components/ui/page-state";
+import { formatDate, formatNumber } from "@/utils/format";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ChartNoAxesColumnIncreasing, ChevronDown, Download, Info, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -21,7 +24,7 @@ const UsageChart = ({
   series,
   metric,
 }: {
-  series: ReturnType<typeof getDemoUsage>["series"];
+  series: DailyUsageResponse[];
   metric: "requests" | "tokens";
 }) => {
   const highest = Math.max(...series.map((day) => day[metric]), 1);
@@ -70,33 +73,49 @@ const UsageChart = ({
   );
 };
 
+const SOURCE_LABELS = { api: "API keys", web: "Mathew AI app" } as const;
+
 export const UsagePage = () => {
-  const keys = useStore($demoKeys);
-  const hasUsage = useStore($demoHasUsage);
   const search = useSearch({ from: "/usage" });
   const navigate = useNavigate({ from: "/usage" });
   const days = search.days ?? "7";
   const keyId = search.key ?? "all";
   const metric = search.metric ?? "requests";
-  const report = getDemoUsage(Number(days), keyId);
-  const blocked = ["loading", "error", "session"].includes(search.preview ?? "");
-  const empty = search.preview === "empty" || !hasUsage || report.requests === 0;
+  // The API resolves "last N days" against Asia/Bangkok's today; the browser
+  // never works out dates itself.
+  const usageQuery = useGetUsage({
+    days: Number(days),
+    key_id: keyId === "all" ? undefined : keyId,
+  });
+  const keysQuery = useListApiKeys();
+  const keys = keysQuery.data ?? [];
+  const report = usageQuery.data;
+  const state: PreviewState = ["loading", "error", "session"].includes(search.preview ?? "")
+    ? search.preview
+    : usageQuery.isPending
+      ? "loading"
+      : usageQuery.isError
+        ? isApiError(usageQuery.error) && usageQuery.error.status === 401
+          ? "session"
+          : "error"
+        : "normal";
+  const blocked = state !== "normal" || !report;
+  const empty = search.preview === "empty" || !report || report.totals.requests === 0;
   const download = () => {
+    if (!report) return;
     const rows = [
       "Date,Requests,Tokens",
-      ...report.series.map(
-        (day) => `${day.date.slice(0, 10)},${empty ? 0 : day.requests},${empty ? 0 : day.tokens}`,
-      ),
+      ...report.daily.map((day) => `${day.date},${day.requests},${day.tokens}`),
     ];
     const url = URL.createObjectURL(
       new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" }),
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = "mathew-ai-demo-usage.csv";
+    link.download = `mathew-ai-usage-${report.from}-to-${report.to}.csv`;
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast.success("Demo usage exported");
+    toast.success("Usage exported");
   };
   return (
     <>
@@ -132,8 +151,8 @@ export const UsagePage = () => {
               })
             }
             options={[
-              { value: "7", label: "Last 7 demo days" },
-              { value: "30", label: "Last 30 demo days" },
+              { value: "7", label: "Last 7 days" },
+              { value: "30", label: "Last 30 days" },
             ]}
           />
           <button
@@ -142,7 +161,7 @@ export const UsagePage = () => {
             title="Refresh usage"
             onClick={() => {
               void navigate({ search: (prev) => ({ ...prev, preview: undefined }) });
-              toast.success("Demo report refreshed. Sample data is fixed.");
+              void usageQuery.refetch();
             }}
           >
             <RefreshCw />
@@ -158,16 +177,19 @@ export const UsagePage = () => {
           </button>
         </div>
       </header>
-      <div className="usage-notice">
-        <Info />
-        <span>
-          Illustrative usage through September 5, 2026. This is sample data, not live API activity.
-        </span>
-      </div>
+      {report?.clamped && (
+        <div className="usage-notice">
+          <Info />
+          <span>Usage is kept for 60 days. The range shown starts at the oldest data kept.</span>
+        </div>
+      )}
       {blocked ? (
         <PageState
-          state={search.preview}
-          onRetry={() => void navigate({ search: (prev) => ({ ...prev, preview: undefined }) })}
+          state={state === "normal" ? "loading" : state}
+          onRetry={() => {
+            void navigate({ search: (prev) => ({ ...prev, preview: undefined }) });
+            void usageQuery.refetch();
+          }}
         />
       ) : (
         <>
@@ -192,7 +214,7 @@ export const UsagePage = () => {
                 </span>
               </div>
               <div className="chart-total">
-                {formatNumber(empty ? 0 : report[metric])}
+                {formatNumber(empty ? 0 : report.totals[metric])}
                 <span>{metric === "requests" ? "total requests" : "total tokens"}</span>
               </div>
               {empty ? (
@@ -201,7 +223,7 @@ export const UsagePage = () => {
                     <ChartNoAxesColumnIncreasing />
                   </div>
                   <h2>No usage data</h2>
-                  <p>There’s no activity for this key in the selected demo period.</p>
+                  <p>There’s no activity for this key in the selected period.</p>
                   <button
                     className="button button-secondary"
                     onClick={() => void navigate({ search: { days, metric } })}
@@ -210,32 +232,35 @@ export const UsagePage = () => {
                   </button>
                 </div>
               ) : (
-                <UsageChart series={report.series} metric={metric} />
+                <UsageChart series={report.daily} metric={metric} />
               )}
             </div>
             <aside className="usage-summary" aria-label="Usage summary">
-              <div className="summary-heading">
-                Period summary<span className="demo-badge">Demo</span>
-              </div>
+              <div className="summary-heading">Period summary</div>
               <div className="summary-stat">
-                <span>Total requests</span>
-                <strong>{formatNumber(empty ? 0 : report.requests)}</strong>
-                <span className="stat-detail">Across the selected API keys</span>
+                <span>Tokens remaining</span>
+                <strong>{formatNumber(report.quota.remaining)}</strong>
+                <span className="stat-detail">
+                  {formatNumber(report.quota.used)} of {formatNumber(report.quota.limit)} used,
+                  shared between API keys and the Mathew AI app
+                </span>
               </div>
-              <div className="summary-stat">
-                <span>Total tokens</span>
-                <strong>{formatNumber(empty ? 0 : report.tokens)}</strong>
-                <span className="stat-detail">Illustrative token consumption</span>
-              </div>
+              {report.by_source.map((row) => (
+                <div className="summary-stat" key={row.source}>
+                  <span>{SOURCE_LABELS[row.source]}</span>
+                  <strong>{formatNumber(row.tokens)} tokens</strong>
+                  <span className="stat-detail">{formatNumber(row.requests)} requests</span>
+                </div>
+              ))}
               <div className="summary-period">
                 <span>Reporting period</span>
                 <p>
-                  {formatDate(report.series[0].date)}
+                  {formatDate(report.from)}
                   <br />
                   {" to "}
-                  {formatDate(report.series[report.series.length - 1].date)}
+                  {formatDate(report.to)}
                 </p>
-                <span>Dates shown in Asia/Bangkok</span>
+                <span>Dates shown in {report.timezone}</span>
               </div>
             </aside>
           </section>
@@ -270,40 +295,42 @@ export const UsagePage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.breakdown.map((row) => {
-                      const key = keys.find((entry) => entry.id === row.id);
-                      const share = (row.requests / report.requests) * 100;
-                      return (
-                        <tr key={row.id}>
-                          <td>
-                            <button
-                              className="key-link"
-                              onClick={() =>
-                                void navigate({ search: (prev) => ({ ...prev, key: row.id }) })
-                              }
-                            >
-                              {key?.name ?? "Previous deployment"}
-                            </button>
-                          </td>
-                          <td>
-                            <span className={`status-badge ${key?.status ?? "revoked"}`}>
-                              <span />
-                              {key?.status === "active" ? "Active" : "Revoked"}
-                            </span>
-                          </td>
-                          <td className="number-cell">{formatNumber(row.requests)}</td>
-                          <td className="number-cell">{formatNumber(row.tokens)}</td>
-                          <td className="share-cell">
-                            <div className="share-value">
-                              <div className="share-track" aria-hidden="true">
-                                <span style={{ width: `${share}%` }} />
-                              </div>
-                              <span>{share.toFixed(1)}%</span>
+                    {report.by_key.map((row) => (
+                      <tr key={row.key_id}>
+                        <td>
+                          <button
+                            className="key-link"
+                            onClick={() =>
+                              void navigate({ search: (prev) => ({ ...prev, key: row.key_id }) })
+                            }
+                          >
+                            {row.name}
+                          </button>
+                        </td>
+                        <td>
+                          <span
+                            className={`status-badge ${row.status === "active" ? "active" : "revoked"}`}
+                          >
+                            <span />
+                            {row.status === "active"
+                              ? "Active"
+                              : row.status === "revoked"
+                                ? "Revoked"
+                                : "Deleted"}
+                          </span>
+                        </td>
+                        <td className="number-cell">{formatNumber(row.requests)}</td>
+                        <td className="number-cell">{formatNumber(row.tokens)}</td>
+                        <td className="share-cell">
+                          <div className="share-value">
+                            <div className="share-track" aria-hidden="true">
+                              <span style={{ width: `${row.request_share_pct}%` }} />
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <span>{row.request_share_pct.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -334,7 +361,7 @@ export const UsagePage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.series.map((day) => (
+                    {report.daily.map((day) => (
                       <tr key={day.date}>
                         <td>{formatDate(day.date)}</td>
                         <td className="number-cell">{formatNumber(day.requests)}</td>

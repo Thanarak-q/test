@@ -6,6 +6,7 @@ FastAPI + MySQL API and a Vite/React web app in one repo.
 api/    FastAPI · SQLAlchemy async · Alembic · MySQL
 web/    Vite · React 19 · TanStack Router + Query · Tailwind v4 · Bun runtime
 docs/   STRUCTURE.md (layout + pinned versions) · DECISIONS.md (why, and what failed)
+        DB_PERMISSIONS.md (grants for the app's MySQL user) · planning/ (design notes)
 ```
 
 ## Setup
@@ -29,8 +30,22 @@ bun run web    # http://localhost:5173
 ## Gates
 
 ```bash
-bun run typecheck && bun run lint && bun run test && bun run format:check
+bun run gates
 ```
+
+API tests that prove fail-closed auth and key ownership run against the compose MySQL
+and Redis (they create and drop a `matthew_test` database). Without the services they
+skip; set `REQUIRE_INFRA=1` (CI) to make a missing service a failure instead.
+
+## Regenerating the web API client
+
+```bash
+bun run api            # the schema is read from the running API
+bun run --cwd web gen:api
+```
+
+Commit the output in `web/src/api/generated/`. If orval fails with
+`Cannot find module 'ajv/dist/core'`, see DECISIONS ("Tried and did not work").
 
 ## Migrations
 

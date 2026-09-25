@@ -28,12 +28,12 @@ export const PageState = ({ state, onRetry }: { state: PreviewState; onRetry: ()
       <h2>{session ? "Your session has expired" : "We couldn't load this page"}</h2>
       <p>
         {session
-          ? "Your keys haven't changed. Reopen the demo to continue."
+          ? "Your keys haven't changed. Sign in again to continue."
           : "Your data hasn't changed. Try loading the page again."}
       </p>
       <button className="button button-secondary" onClick={onRetry}>
         <RefreshCw />
-        {session ? "Reopen demo" : "Try again"}
+        Try again
       </button>
     </div>
   );

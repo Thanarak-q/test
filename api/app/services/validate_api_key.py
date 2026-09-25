@@ -57,7 +57,9 @@ class AuthDatabase(Protocol):
         self, key_id: str, *, timeout_seconds: float
     ) -> Mapping[str, object] | None: ...
 
-    async def update_last_used(self, key_id: str, at: datetime) -> None: ...
+    async def update_last_used(
+        self, key_id: str, *, user_id: int, at: datetime
+    ) -> None: ...
 
 
 class AuthFailureAudit(Protocol):
@@ -112,13 +114,13 @@ async def validate_api_key(
     """
     parsed = _parse_token(token)
     if parsed is None:
-        raise _invalid_credential()  # 401
+        raise invalid_credential()  # 401
 
     key_id, secret = parsed
     try:
         if await cache.get_negative(key_id):  # Have in negative cache?
             await _audit_failure(audit, key_id, source_ip, "key_not_found")
-            raise _invalid_credential()
+            raise invalid_credential()
         # base62 -> ascii -> 256bit -> Hexadecimal
         key_hash = hashlib.sha256(secret.encode("ascii")).hexdigest()
         cached = await cache.get_positive(key_id)  # have in potitive cache
@@ -133,12 +135,12 @@ async def validate_api_key(
             if database_record is None:  # not found
                 await cache.set_negative(key_id, NEGATIVE_CACHE_TTL_SECONDS)
                 await _audit_failure(audit, key_id, source_ip, "key_not_found")
-                raise _invalid_credential()  # 401
+                raise invalid_credential()  # 401
 
             record = _validate_record(database_record, key_id)
             if record is None:
                 await _audit_failure(audit, key_id, source_ip, "invalid_credential")
-                raise _invalid_credential()
+                raise invalid_credential()
 
         # Both checks are evaluated before branching so that a revoked key and
         # a wrong secret take the same path. Short-circuiting on status would
@@ -146,7 +148,7 @@ async def validate_api_key(
         hash_matches = hmac.compare_digest(record.key_hash, key_hash)
         if record.status != "active" or not hash_matches:
             await _audit_failure(audit, key_id, source_ip, "invalid_credential")
-            raise _invalid_credential()
+            raise invalid_credential()
 
         previous_last_used = record.last_used_at
         record = await _refresh_last_used(record, key_id, database, now)
@@ -236,7 +238,7 @@ async def _refresh_last_used(
     ):
         return record
 
-    await database.update_last_used(key_id, current_time)
+    await database.update_last_used(key_id, user_id=record.user_id, at=current_time)
     return replace(record, last_used_at=current_time)
 
 
@@ -256,7 +258,8 @@ async def _audit_failure(
         logger.warning("auth failure audit unavailable", extra={"key_id": key_id})
 
 
-def _invalid_credential() -> HTTPException:
+def invalid_credential() -> HTTPException:
+    """The one 401 for every credential failure: same status, body, headers."""
     return HTTPException(status_code=401, detail=INVALID_API_KEY_MESSAGE)
 
 

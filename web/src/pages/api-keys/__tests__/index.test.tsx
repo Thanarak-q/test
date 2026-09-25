@@ -1,9 +1,32 @@
+import type { KeySummaryResponse } from "@/api/generated/model";
+import { ApiError } from "@/api/mutator";
 import { Dialog } from "@/components/ui/dialog";
-import { $demoKeys, createDemoKey, resetDemoKeys } from "@/stores/demo";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiKeysPage, CreateKeyDialog, RevokeKeyDialog } from "../index";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiKeysPage, CreateKeyDialog, KeyActionDialog } from "../index";
+
+const api = vi.hoisted(() => ({
+  createApiKey: vi.fn(),
+  deleteApiKey: vi.fn(),
+  revokeApiKey: vi.fn(),
+  listed: [] as KeySummaryResponse[],
+}));
+
+vi.mock("@/api/generated/api-keys/api-keys", () => ({
+  createApiKey: api.createApiKey,
+  deleteApiKey: api.deleteApiKey,
+  revokeApiKey: api.revokeApiKey,
+  getListApiKeysQueryKey: () => ["POST", "/v1/api-keys/list"],
+  useListApiKeys: () => ({
+    data: api.listed,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
 
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/usage">{children}</a>,
@@ -11,223 +34,226 @@ vi.mock("@tanstack/react-router", () => ({
   useSearch: () => ({ q: "", status: "all", page: 1, preview: "normal" }),
 }));
 
-const flushDemoOperation = async () => {
+const KEY_ID = "01K5ZQ3NDEKTSV4RRFFQ69G5FA";
+const PREFIX = `mthw01_${KEY_ID}`;
+const SECRET_KEY = `${PREFIX}_Abcdef0123456789Abcdef0123456789`;
+
+const summary = (overrides: Partial<KeySummaryResponse> = {}): KeySummaryResponse => ({
+  id: KEY_ID,
+  name: "Production server",
+  key_prefix: PREFIX,
+  status: "active",
+  created_at: "2026-09-01T03:00:00Z",
+  last_used_at: "2026-09-20T03:00:00Z",
+  never_used: false,
+  ...overrides,
+});
+
+const wrap = (node: ReactNode) =>
+  render(<QueryClientProvider client={new QueryClient()}>{node}</QueryClientProvider>);
+
+const flush = async () => {
   await act(async () => {
-    vi.runOnlyPendingTimers();
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
   });
 };
 
-const renderCreateDialog = () => {
+const createKey = async (name = "Integration test") => {
   const onClose = vi.fn();
-  const onCreated = vi.fn();
-  render(<CreateKeyDialog onClose={onClose} onCreated={onCreated} startEmpty={false} />);
-  return { onClose, onCreated };
+  wrap(<CreateKeyDialog onClose={onClose} />);
+  fireEvent.change(screen.getByLabelText("Name"), { target: { value: name } });
+  fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
+  await flush();
+  return { onClose };
 };
 
+const code = () => document.querySelector(".secret-value")!;
+
 describe("API key dialogs", () => {
+  beforeEach(() => {
+    api.createApiKey.mockResolvedValue({
+      id: KEY_ID,
+      name: "Integration test",
+      key: SECRET_KEY,
+      key_prefix: PREFIX,
+      created_at: "2026-09-25T03:00:00Z",
+    });
+    api.deleteApiKey.mockResolvedValue({ ok: true });
+    api.revokeApiKey.mockResolvedValue({ ok: true });
+    api.listed = [];
+  });
+
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
-    resetDemoKeys();
+    vi.clearAllMocks();
   });
 
-  it("validates names and guards a pending create from duplicate submits", async () => {
-    vi.useFakeTimers();
-    const { onCreated } = renderCreateDialog();
+  it("validates names, trims them, and guards a pending create from duplicate submits", async () => {
+    let resolve: (value: unknown) => void = () => {};
+    api.createApiKey.mockReturnValue(new Promise((done) => (resolve = done)));
+    wrap(<CreateKeyDialog onClose={vi.fn()} />);
     const input = screen.getByLabelText("Name");
     const submit = screen.getByRole("button", { name: "Create secret key" });
 
     expect(submit).toBeDisabled();
     fireEvent.change(input, { target: { value: "  Integration test  " } });
-    expect(submit).not.toBeDisabled();
     fireEvent.click(submit);
     expect(submit).toBeDisabled();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     fireEvent.submit(input.closest("form")!);
+    resolve({ id: KEY_ID, key: SECRET_KEY, key_prefix: PREFIX });
+    await flush();
 
-    await flushDemoOperation();
-    expect(onCreated).toHaveBeenCalledTimes(1);
-    expect($demoKeys.get().filter((key) => key.name === "Integration test")).toHaveLength(1);
+    expect(api.createApiKey).toHaveBeenCalledTimes(1);
+    expect(api.createApiKey).toHaveBeenCalledWith({ name: "Integration test" });
   });
 
-  it("keeps the secret out of masked markup, supports copy, and expires reveals", async () => {
+  it("masks with the API's prefix, copies, and auto-masks after 60 seconds", async () => {
     vi.useFakeTimers();
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-    renderCreateDialog();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Copy test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
-    await flushDemoOperation();
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    await createKey();
 
-    const copy = screen.getByRole("button", { name: "Copy secret key" });
-    const code = () => document.querySelector(".secret-value")!;
     expect(code().tagName).toBe("CODE");
-    fireEvent.click(copy);
-    await act(async () => {
-      await Promise.resolve();
-    });
-    const secret = writeText.mock.calls[0][0] as string;
-    expect(secret).toMatch(/^mk_demo_/);
-    expect(code()).not.toHaveTextContent(secret);
-    expect(JSON.stringify($demoKeys.get())).not.toContain(secret);
-    expect(window.location.href).not.toContain(secret);
+    expect(code()).toHaveTextContent(PREFIX);
+    expect(code()).not.toHaveTextContent(SECRET_KEY);
+    fireEvent.click(screen.getByRole("button", { name: "Copy secret key" }));
+    await flush();
+    expect(writeText).toHaveBeenCalledWith(SECRET_KEY);
     expect(screen.getByRole("status")).toHaveTextContent("Copied to clipboard");
+    expect(window.location.href).not.toContain(SECRET_KEY);
 
     fireEvent.click(screen.getByRole("button", { name: "Reveal" }));
-    expect(code()).toHaveTextContent(secret);
+    expect(code()).toHaveTextContent(SECRET_KEY);
     fireEvent.click(screen.getByRole("button", { name: "Hide" }));
-    expect(code()).not.toHaveTextContent(secret);
+    expect(code()).not.toHaveTextContent(SECRET_KEY);
     fireEvent.click(screen.getByRole("button", { name: "Reveal" }));
-    expect(code()).toHaveTextContent(secret);
     act(() => vi.advanceTimersByTime(59_999));
-    expect(code()).toHaveTextContent(secret);
-    fireEvent.click(copy);
-    await act(async () => {
-      await Promise.resolve();
-    });
+    expect(code()).toHaveTextContent(SECRET_KEY);
     act(() => vi.advanceTimersByTime(1));
-    expect(code()).not.toHaveTextContent(secret);
+    expect(code()).not.toHaveTextContent(SECRET_KEY);
 
     fireEvent.click(screen.getByRole("button", { name: "Reveal" }));
-    Object.defineProperty(document, "visibilityState", {
-      configurable: true,
-      value: "hidden",
-    });
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
     fireEvent(document, new Event("visibilitychange"));
-    expect(code()).not.toHaveTextContent(secret);
+    expect(code()).not.toHaveTextContent(SECRET_KEY);
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
   });
 
-  it("clears secret state and timers when saved, pagehide fires, or it unmounts", async () => {
-    vi.useFakeTimers();
-    const { onClose } = renderCreateDialog();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Cleanup test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
-    await flushDemoOperation();
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Copy secret key" }));
-    await act(async () => {
-      await Promise.resolve();
-    });
-    const secret = writeText.mock.calls[0][0] as string;
+  it("clears the secret on pagehide and closes only through “I've saved it”", async () => {
+    const { onClose } = await createKey();
     fireEvent.click(screen.getByRole("button", { name: "Reveal" }));
-    expect(document.body).toHaveTextContent(secret);
+    expect(document.body).toHaveTextContent(SECRET_KEY);
+
     fireEvent(window, new Event("pagehide"));
-    expect(document.body).not.toHaveTextContent(secret);
-    act(() => vi.advanceTimersByTime(60_000));
-    expect(document.body).not.toHaveTextContent(secret);
+    expect(document.body).not.toHaveTextContent(SECRET_KEY);
 
     cleanup();
-    resetDemoKeys();
-    const saved = renderCreateDialog();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Saved test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
-    await flushDemoOperation();
+    const saved = await createKey("Saved test");
     fireEvent.click(screen.getByRole("button", { name: "I've saved it" }));
     expect(saved.onClose).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("abandons a pending create on pagehide and allows a fresh create after restore", async () => {
-    vi.useFakeTimers();
-    const { onCreated } = renderCreateDialog();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Interrupted create" } });
+  it("deletes a key whose create finished after the page went away", async () => {
+    let resolve: (value: unknown) => void = () => {};
+    api.createApiKey.mockReturnValue(new Promise((done) => (resolve = done)));
+    wrap(<CreateKeyDialog onClose={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Interrupted" } });
     fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
     fireEvent(window, new Event("pagehide"));
-    await flushDemoOperation();
-    await flushDemoOperation();
-    expect(onCreated).not.toHaveBeenCalled();
-    expect($demoKeys.get().find((key) => key.name === "Interrupted create")?.status).toBe(
-      "revoked",
-    );
-    expect(document.body).not.toHaveTextContent("mk_demo_");
+    resolve({ id: KEY_ID, key: SECRET_KEY, key_prefix: PREFIX });
+    await flush();
 
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Restored create" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
-    await flushDemoOperation();
-    expect(onCreated).toHaveBeenCalledTimes(1);
-    expect($demoKeys.get().find((key) => key.name === "Restored create")?.status).toBe("active");
+    expect(api.deleteApiKey).toHaveBeenCalledWith({ id: KEY_ID });
+    expect(document.body).not.toHaveTextContent(SECRET_KEY);
   });
 
-  it("keeps the create dialog open when discard fails and revokes on success", async () => {
-    vi.useFakeTimers();
-    const { onClose } = renderCreateDialog();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Discard test" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
-    await flushDemoOperation();
-    const createdId = $demoKeys.get()[0].id;
-    $demoKeys.set(
-      $demoKeys.get().map((key) => (key.id === createdId ? { ...key, status: "revoked" } : key)),
-    );
+  it("discard deletes the key, and a failed discard keeps the dialog open", async () => {
+    api.deleteApiKey.mockRejectedValueOnce(new ApiError("internal_error", "boom", 500));
+    const { onClose } = await createKey();
+
     fireEvent.click(screen.getByRole("button", { name: "Discard key" }));
-    await flushDemoOperation();
-    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't revoke this key. Try again.");
+    await flush();
+    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't discard this key. Try again.");
     expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard key" }));
+    await flush();
+    expect(api.deleteApiKey).toHaveBeenLastCalledWith({ id: KEY_ID });
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(document.body).not.toHaveTextContent(SECRET_KEY);
   });
 
-  it("discards a created key and removes its secret from the dialog and store", async () => {
-    vi.useFakeTimers();
-    const { onClose } = renderCreateDialog();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Discard success" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
-    await flushDemoOperation();
-    fireEvent.click(screen.getByRole("button", { name: "Reveal" }));
-    const secret = screen.getByRole("textbox", { name: "Secret key" }).textContent!;
-    fireEvent.click(screen.getByRole("button", { name: "Discard key" }));
-    await flushDemoOperation();
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(document.body).not.toHaveTextContent(secret);
-    expect($demoKeys.get()[0].status).toBe("revoked");
-    expect(JSON.stringify($demoKeys.get())).not.toContain(secret);
+  it("shows the server's message when the key limit is reached", async () => {
+    api.createApiKey.mockRejectedValue(
+      new ApiError(
+        "identity_api_key_limit_reached",
+        "You can have up to 5 active API keys. Revoke one before creating another.",
+        409,
+      ),
+    );
+    await createKey();
+
+    expect(screen.getByRole("alert")).toHaveTextContent("up to 5 active API keys");
   });
 
   it("shows a manual-copy message when the clipboard rejects", async () => {
-    vi.useFakeTimers();
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
     });
-    renderCreateDialog();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Manual copy" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create secret key" }));
-    await flushDemoOperation();
+    await createKey();
     fireEvent.click(screen.getByRole("button", { name: "Copy secret key" }));
-    await act(async () => {
-      await Promise.resolve();
-    });
+    await flush();
+
     expect(screen.getByRole("alert")).toHaveTextContent(/select it and copy it manually/i);
   });
 
-  it("handles revoke success and failure without duplicate operations", async () => {
-    vi.useFakeTimers();
-    const entry = $demoKeys.get().find((key) => key.status === "active")!;
+  it("confirms revoke with the key name and guards duplicate clicks", async () => {
     const onClose = vi.fn();
-    render(<RevokeKeyDialog entry={entry} onClose={onClose} />);
-    const revoke = screen.getByRole("button", { name: "Revoke key" });
+    wrap(<KeyActionDialog action="revoke" entry={summary()} onClose={onClose} />);
+    expect(screen.getByRole("dialog")).toHaveTextContent("Revoke “Production server”?");
+    const revoke = screen.getByRole("button", { name: "Revoke “Production server”" });
+
     fireEvent.click(revoke);
     expect(revoke).toBeDisabled();
     fireEvent.click(revoke);
-    await flushDemoOperation();
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect($demoKeys.get().find((key) => key.id === entry.id)?.status).toBe("revoked");
+    await flush();
 
-    cleanup();
-    resetDemoKeys();
-    const revoked = $demoKeys.get().find((key) => key.status === "revoked")!;
-    const failureClose = vi.fn();
-    render(<RevokeKeyDialog entry={revoked} onClose={failureClose} />);
-    fireEvent.click(screen.getByRole("button", { name: "Revoke key" }));
-    await flushDemoOperation();
-    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't revoke this key. Try again.");
-    expect(failureClose).not.toHaveBeenCalled();
+    expect(api.revokeApiKey).toHaveBeenCalledTimes(1);
+    expect(api.revokeApiKey).toHaveBeenCalledWith({ id: KEY_ID });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("never reports success when cache invalidation failed", async () => {
+    api.revokeApiKey.mockRejectedValue(
+      new ApiError("identity_api_key_revocation_pending", "The key is not revoked yet.", 500),
+    );
+    const onClose = vi.fn();
+    wrap(<KeyActionDialog action="revoke" entry={summary()} onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Revoke “Production server”" }));
+    await flush();
+
+    expect(screen.getByRole("alert")).toHaveTextContent("The key is not revoked yet. Try again.");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("confirms delete with the key name", async () => {
+    const onClose = vi.fn();
+    wrap(
+      <KeyActionDialog action="delete" entry={summary({ status: "revoked" })} onClose={onClose} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete “Production server”" }));
+    await flush();
+
+    expect(api.deleteApiKey).toHaveBeenCalledWith({ id: KEY_ID });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("applies dismissal rules and restores focus for shared dialogs", () => {
@@ -240,8 +266,7 @@ describe("API key dialogs", () => {
         <p>Body</p>
       </Dialog>,
     );
-    const dialog = screen.getByRole("dialog");
-    fireEvent(dialog, new Event("cancel", { bubbles: true, cancelable: true }));
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { bubbles: true, cancelable: true }));
     expect(dismiss).toHaveBeenCalledTimes(1);
     unmount();
     expect(trigger).toHaveFocus();
@@ -262,21 +287,42 @@ describe("API key dialogs", () => {
     trigger.remove();
   });
 
-  it("renders full safe prefixes, dims revoked rows, and explains unused keys", () => {
-    render(<ApiKeysPage />);
+  it("renders the API's prefix, dims revoked rows, and marks unused keys", () => {
+    api.listed = [
+      summary(),
+      summary({
+        id: "01K5ZQ3NDEKTSV4RRFFQ69G5FB",
+        name: "Local testing",
+        key_prefix: "mthw01_01K5ZQ3NDEKTSV4RRFFQ69G5FB",
+        last_used_at: null,
+        never_used: true,
+      }),
+      summary({
+        id: "01K5ZQ3NDEKTSV4RRFFQ69G5FC",
+        name: "Previous deployment",
+        key_prefix: "mthw01_01K5ZQ3NDEKTSV4RRFFQ69G5FC",
+        status: "revoked",
+      }),
+    ];
+    wrap(<ApiKeysPage />);
+
     expect(screen.getAllByRole("columnheader").map((header) => header.textContent?.trim())).toEqual(
       ["Name", "Key", "Status", "Last used", "Actions"],
     );
-    expect(screen.getByText("mk_demo_prod")).toBeVisible();
+    expect(screen.getByText(PREFIX)).toBeVisible();
     expect(screen.getByText("Previous deployment").closest("tr")).toHaveClass("revoked-row");
     expect(screen.getByText("Never used")).toBeVisible();
-    expect(screen.getByText("Consider removing this key.")).toBeVisible();
-    expect(screen.getByTitle("Active key capacity")).toHaveTextContent("4 / 5 keys");
+    expect(screen.getByRole("button", { name: "Revoke Production server" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Delete Previous deployment" })).toBeVisible();
+    expect(screen.getByTitle("Active key capacity")).toHaveTextContent("2 / 5 keys");
   });
 
-  it("disables creation at the active-key limit", async () => {
-    await createDemoKey("At the limit");
-    render(<ApiKeysPage />);
+  it("disables creation at the active-key limit", () => {
+    api.listed = Array.from({ length: 5 }, (_, index) =>
+      summary({ id: `01K5ZQ3NDEKTSV4RRFFQ69G5F${index}`, name: `Key ${index}` }),
+    );
+    wrap(<ApiKeysPage />);
+
     expect(screen.getByRole("button", { name: "Create new secret key" })).toBeDisabled();
     expect(screen.getByTitle("Active key capacity")).toHaveTextContent("5 / 5 keys");
     expect(screen.getByText("Revoke a key before creating another.")).toBeVisible();

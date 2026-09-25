@@ -21,7 +21,7 @@ The API is compatible with the OpenAI SDKs: point them at our base URL
 
 ## 3. What you get back
 
-<CodeBlock label="Response" code={chatResponse.code} unconfirmed={chatResponse.unconfirmed} />
+<CodeBlock label="Response" code={chatResponse.code} />
 
 `choices[0].message.content` is the reply. `usage` is what the request cost in tokens —
 see [Models](/docs/models) for what a token is and how quota works.

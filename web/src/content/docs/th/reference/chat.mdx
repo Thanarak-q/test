@@ -1,0 +1,38 @@
+import { chatRequest, chatRequestSchema, chatResponse, chatResponseSchema } from "../../samples";
+
+<code>POST {"{base_url}"}/chat/completions</code> — base URL <Value path="baseUrl" code />
+
+สร้างข้อความถัดไปในบทสนทนา
+
+## Request
+
+<CodeBlock label="Request body" code={chatRequestSchema.code} />
+
+`max_tokens` ต้องไม่เกิน <Value path="limits.maxOutputTokens" /> และทั้งคำขอต้องมี input
+ไม่เกิน <Value path="limits.maxInputTokens" /> โทเคน พารามิเตอร์ที่ไม่รองรับ
+
+<Value path="unsupportedParams" />
+
+## Response
+
+<CodeBlock label="Response body" code={chatResponseSchema.code} />
+
+## ตัวอย่าง
+
+<CodeTabs sample={chatRequest} />
+
+<CodeBlock label="Response" code={chatResponse.code} />
+
+## Errors
+
+| Status | Code                           | เกิดเมื่อ                                   |
+| ------ | ------------------------------ | ------------------------------------------- |
+| 400    | `http_400`                     | ไม่ใช่ HTTPS หรือคำขอไม่ได้มาผ่าน proxy     |
+| 401    | `http_401`                     | ไม่มีคีย์ คีย์ผิด หรือคีย์ไม่ได้ใช้งานอยู่  |
+| 413    | `http_413`                     | Input เกินเพดานโทเคนต่อคำขอ                 |
+| 422    | `validation_error`             | Body ไม่ตรงกับ schema ข้างบน                |
+| 429    | `rate_limit_exceeded_requests` | ชนข้อจำกัดด้านคำขอ                          |
+| 429    | `rate_limit_exceeded_tokens`   | ชนข้อจำกัดด้านโทเคน                         |
+| 503    | `http_503`                     | ระบบที่เราพึ่งพาใช้งานไม่ได้ ลองใหม่ภายหลัง |
+
+รายละเอียดและสิ่งที่ควรทำ: [Errors](/docs/errors)

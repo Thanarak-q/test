@@ -73,7 +73,7 @@ const UsageChart = ({
   );
 };
 
-const SOURCE_LABELS = { api: "API keys", web: "Mathew AI app" } as const;
+const SOURCE_LABELS = { api: "API keys", web: "Mathew API app" } as const;
 
 export const UsagePage = () => {
   const search = useSearch({ from: "/usage" });
@@ -119,7 +119,7 @@ export const UsagePage = () => {
   };
   return (
     <>
-      <title>Usage · Mathew AI</title>
+      <title>Usage · Mathew API</title>
       <header className="page-header usage-header">
         <h1>Usage</h1>
         <div className="header-actions">
@@ -242,7 +242,7 @@ export const UsagePage = () => {
                 <strong>{formatNumber(report.quota.remaining)}</strong>
                 <span className="stat-detail">
                   {formatNumber(report.quota.used)} of {formatNumber(report.quota.limit)} used,
-                  shared between API keys and the Mathew AI app
+                  shared between API keys and the Mathew API app
                 </span>
               </div>
               {report.by_source.map((row) => (

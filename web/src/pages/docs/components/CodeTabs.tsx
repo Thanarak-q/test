@@ -29,6 +29,10 @@ export const CodeTabs = ({ sample }: { sample: Sample }) => {
             aria-pressed={selected === language}
             onClick={() =>
               void navigate({
+                // Stay on the current page. Without `to`, navigating from
+                // "/docs" goes to /docs itself, which redirects to the quickstart.
+                to: "/docs/$",
+                params: (prev) => prev,
                 search: (prev) => ({ ...prev, lang: language }),
                 replace: true,
                 resetScroll: false,
@@ -39,11 +43,7 @@ export const CodeTabs = ({ sample }: { sample: Sample }) => {
           </button>
         ))}
       </div>
-      <CodeBlock
-        code={sample.code[selected] ?? ""}
-        label={LABELS[selected]}
-        unconfirmed={sample.unconfirmed}
-      />
+      <CodeBlock code={sample.code[selected] ?? ""} label={LABELS[selected]} />
     </div>
   );
 };

@@ -1,0 +1,54 @@
+import { docsValues } from "../values";
+
+<div className="table-scroll" role="region" tabIndex={0} aria-label="โมเดล">
+  <table className="data-table docs-table">
+    <thead>
+      <tr>
+        <th scope="col">โมเดล</th>
+        <th scope="col">ใช้สำหรับ</th>
+        <th scope="col">Context window (โทเคน)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {docsValues.models.map((model, index) => (
+        <tr key={model.name}>
+          <td>
+            <Value path={`models[${index}].name`} code />
+          </td>
+          <td>
+            <Value path={`models[${index}].purpose`} />
+          </td>
+          <td>
+            <Value path={`models[${index}].contextWindow`} />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+Context window คือปริมาณสูงสุดที่โมเดลรับได้ในหนึ่งคำขอ นับรวมทั้ง prompt และคำตอบ
+
+## โทเคน
+
+โมเดลอ่านและเขียนข้อความเป็น **โทเคน** ซึ่งเป็นชิ้นส่วนของคำ ไม่ใช่ตัวอักษร
+ทั้งการใช้งาน โควตา และ rate limit ด้านโทเคน นับเป็นโทเคนทั้งหมด
+
+ข้อความภาษาไทยใช้โทเคนต่อตัวอักษรมากกว่าภาษาอังกฤษอย่างเห็นได้ชัด
+ข้อความเดียวกันจึงใช้โทเคนมากกว่าเมื่อเขียนเป็นภาษาไทย ให้ประเมินงบจาก prompt จริงสักสองสามตัว
+แทนการนับตัวอักษร
+
+## โควตาใช้ร่วมกับเว็บแอป
+
+โควตาโทเคนของคุณครอบคลุมทั้ง API และเว็บแอป Mathew API ถ้าใช้ API มาก
+เว็บแอปก็จะเหลือโควตาน้อยลง และในทางกลับกันก็เช่นกัน
+
+ดูโควตาที่เหลือได้เฉพาะในหน้า [Usage](/usage) ซึ่งแยกการใช้งานตาม API และเว็บ
+API จะไม่ส่งค่านี้กลับมา เพราะคนที่ใช้คีย์อาจไม่ใช่เจ้าของบัญชี
+
+## เพดานต่อคำขอ
+
+- Input: ไม่เกิน <Value path="limits.maxInputTokens" /> โทเคนต่อคำขอ
+- Output: ไม่เกิน <Value path="limits.maxOutputTokens" /> โทเคนต่อคำตอบ (`max_tokens`)
+
+คำขอที่ input เกินเพดานจะถูกปฏิเสธด้วย `413` ก่อนนำไปนับใน rate limit

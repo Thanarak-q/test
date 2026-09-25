@@ -8,9 +8,9 @@ Two limits apply to every account, and a request must pass both.
 | Tokens   | estimated tokens in each request | `X-RateLimit-Tokens-Limit`, `X-RateLimit-Tokens-Remaining`, `X-RateLimit-Tokens-Reset` |
 
 - Requests: up to <Value path="limits.requests.capacity" /> at once, refilling at
-  <Value path="limits.requests.refillPerSecond" /> per second.
+  <Value path="limits.requests.refillPerMinute" /> per minute.
 - Tokens: up to <Value path="limits.tokens.capacity" />, refilling at
-  <Value path="limits.tokens.refillPerSecond" /> per second.
+  <Value path="limits.tokens.refillPerMinute" /> per minute.
 
 `-Reset` is the number of seconds until that bucket is full again.
 

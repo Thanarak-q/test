@@ -37,11 +37,44 @@ describe("docs", () => {
   it.each(allPages.map((page) => [page.slug, page]))("renders /docs/%s", async (_, page) => {
     await open(`/docs/${page.slug}`);
 
-    expect(await screen.findByRole("heading", { level: 1, name: page.title })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: page.title.en })).toBeVisible();
     // Every page is reachable from the docs sidebar.
     const nav = screen.getByRole("navigation", { name: "Documentation" });
-    expect(within(nav).getByRole("link", { name: page.title })).toBeVisible();
-    expect(within(article()).queryAllByText("Preview").length > 0).toBe(Boolean(page.preview));
+    expect(within(nav).getByRole("link", { name: page.title.en })).toBeVisible();
+    expect(within(article()).queryByText("Preview")).toBeNull();
+  });
+
+  it.each(allPages.map((page) => [page.slug, page]))(
+    "renders /docs/%s in Thai",
+    async (_, page) => {
+      await open(`/docs/${page.slug}?locale=th`);
+
+      expect(await screen.findByRole("heading", { level: 1, name: page.title.th })).toBeVisible();
+      const nav = screen.getByRole("navigation", { name: "Documentation" });
+      expect(within(nav).getByRole("link", { name: page.title.th })).toBeVisible();
+    },
+  );
+
+  it("switches language and keeps it across pages", async () => {
+    await open("/docs/errors");
+    await screen.findByRole("heading", { level: 1, name: "Errors" });
+    fireEvent.click(screen.getByRole("link", { name: "ไทย" }));
+    expect(await screen.findByText("401 ไม่บอกสาเหตุ")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("link", { name: "โมเดล" }));
+    expect(await screen.findByRole("heading", { level: 1, name: "โมเดล" })).toBeVisible();
+  });
+
+  it("switches code language without leaving the page", async () => {
+    const router = await open("/docs/reference/embeddings");
+    await screen.findByRole("heading", { level: 1, name: "Embeddings" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Python" }));
+    await act(async () => {});
+
+    expect(router.state.location.pathname).toBe("/docs/reference/embeddings");
+    expect(router.state.location.search).toMatchObject({ lang: "python" });
+    expect(screen.getByRole("button", { name: "Python" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("redirects /docs to the quickstart", async () => {
@@ -58,12 +91,14 @@ describe("docs", () => {
     expect(within(main).getByRole("link", { name: "Docs" })).toHaveAttribute("href", "/docs");
   });
 
-  it("shows placeholders as “To be confirmed”, never as raw values", async () => {
+  it("shows placeholders as a dash, never as raw values or a notice", async () => {
     await open("/docs/models");
     await screen.findByRole("heading", { level: 1, name: "Models" });
 
     const table = within(article()).getByRole("table");
-    expect(within(table).getAllByText("To be confirmed")).toHaveLength(docsValues.models.length);
+    const pending = docsValues.models.filter((model) => model.contextWindow === 0);
+    expect(within(table).getAllByText("—")).toHaveLength(pending.length);
+    expect(article()).not.toHaveTextContent(/to be confirmed/i);
     expect(article()).not.toHaveTextContent(/\bTBD\b/);
   });
 

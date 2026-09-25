@@ -9,6 +9,7 @@ import type { KeySummaryResponse } from "@/api/generated/model";
 import { isApiError } from "@/api/mutator";
 import { Dialog } from "@/components/ui/dialog";
 import { FilterSelect } from "@/components/ui/filter-select";
+import { Mascot } from "@/components/ui/mascot";
 import { PageState, previewSchema, type PreviewState } from "@/components/ui/page-state";
 import { formatDate } from "@/utils/format";
 import { useQueryClient } from "@tanstack/react-query";
@@ -486,7 +487,7 @@ export const ApiKeysPage = () => {
     });
   return (
     <>
-      <title>API Keys · Mathew AI</title>
+      <title>API Keys · Mathew API</title>
       <header className="page-header">
         <h1>API keys</h1>
         <div className="header-actions">
@@ -703,9 +704,13 @@ export const ApiKeysPage = () => {
           </>
         ) : (
           <div className="empty-state">
-            <div className="state-icon">
-              {query || visibleKeys.length ? <Search /> : <LockKeyhole />}
-            </div>
+            {query || visibleKeys.length ? (
+              <div className="state-icon">
+                <Search />
+              </div>
+            ) : (
+              <Mascot />
+            )}
             <h2>
               {query || visibleKeys.length
                 ? "No keys match your filters"
@@ -714,7 +719,7 @@ export const ApiKeysPage = () => {
             <p>
               {query || visibleKeys.length
                 ? "Try a different name or include all key statuses."
-                : "Create a key to get started with the Mathew AI API."}
+                : "Create a key to get started with the Mathew API API."}
             </p>
             {query || visibleKeys.length ? (
               <button className="button button-secondary" onClick={clearFilters}>

@@ -1,19 +1,15 @@
 // Code samples for the docs, built from values.ts so no value is spelled out
 // twice. Never put a real key in a sample: examples always use the
 // placeholder below, so no secret reaches the DOM, clipboard or screenshots.
-import { isPlaceholder, listPlaceholders } from "./placeholders";
 import { docsValues } from "./values";
 
 type Language = "curl" | "python" | "javascript";
 
 export type Sample = {
   code: Partial<Record<Language, string>>;
-  // Shows the "To be confirmed" badge on the code block when the sample
-  // depends on a value that is still a placeholder.
-  unconfirmed: boolean;
 };
 
-export type Snippet = { code: string; unconfirmed: boolean };
+export type Snippet = { code: string };
 
 const { baseUrl, keyPrefix } = docsValues;
 const chatModel = docsValues.models.find((model) => model.purpose === "chat")!;
@@ -21,18 +17,8 @@ const embeddingModel = docsValues.models.find((model) => model.purpose === "embe
 
 export const exampleKey = `${keyPrefix}_YOUR_KEY_ID_YOUR_SECRET`;
 
-const dependsOn = (...values: unknown[]) =>
-  values.some((value) =>
-    typeof value === "object" ? listPlaceholders(value).length > 0 : isPlaceholder(value, ""),
-  );
-
-const urlPending = dependsOn(baseUrl);
-const chatPending = urlPending || dependsOn(chatModel);
-const embeddingPending = urlPending || dependsOn(embeddingModel);
-
 // region Quickstart / chat
 export const chatRequest: Sample = {
-  unconfirmed: chatPending,
   code: {
     curl: `curl ${baseUrl}/chat/completions \\
   -H "Authorization: Bearer $MATHEW_API_KEY" \\
@@ -70,7 +56,6 @@ console.log(response.choices[0].message.content);`,
 };
 
 export const chatResponse: Snippet = {
-  unconfirmed: dependsOn(chatModel),
   code: `{
   "id": "chatcmpl-123",
   "object": "chat.completion",
@@ -88,7 +73,6 @@ export const chatResponse: Snippet = {
 };
 
 export const chatRequestSchema: Snippet = {
-  unconfirmed: false,
   code: `{
   "model": string,            // a chat model from the Models page
   "messages": [               // the conversation so far, oldest first
@@ -100,7 +84,6 @@ export const chatRequestSchema: Snippet = {
 };
 
 export const chatResponseSchema: Snippet = {
-  unconfirmed: false,
   code: `{
   "id": string,
   "object": "chat.completion",
@@ -120,7 +103,6 @@ export const chatResponseSchema: Snippet = {
 
 // region Embeddings
 export const embeddingsRequest: Sample = {
-  unconfirmed: embeddingPending,
   code: {
     curl: `curl ${baseUrl}/embeddings \\
   -H "Authorization: Bearer $MATHEW_API_KEY" \\
@@ -140,7 +122,6 @@ const vector = response.data[0].embedding;`,
 };
 
 export const embeddingsSchema: Snippet = {
-  unconfirmed: false,
   code: `// request
 {
   "model": string,            // an embedding model from the Models page
@@ -159,7 +140,6 @@ export const embeddingsSchema: Snippet = {
 
 // region Models
 export const modelsRequest: Sample = {
-  unconfirmed: urlPending,
   code: {
     curl: `curl ${baseUrl}/models \\
   -H "Authorization: Bearer $MATHEW_API_KEY"`,
@@ -172,7 +152,6 @@ export const modelsRequest: Sample = {
 };
 
 export const modelsResponse: Snippet = {
-  unconfirmed: docsValues.models.some((model) => dependsOn(model)),
   code: `{
   "object": "list",
   "data": [
@@ -186,12 +165,10 @@ ${docsValues.models
 
 // region Authentication
 export const authHeader: Snippet = {
-  unconfirmed: false,
   code: `Authorization: Bearer ${exampleKey}`,
 };
 
 export const envVariable: Sample = {
-  unconfirmed: false,
   code: {
     curl: `# .env — list this file in .gitignore
 MATHEW_API_KEY=${exampleKey}`,
@@ -206,7 +183,6 @@ if (!apiKey) throw new Error("MATHEW_API_KEY is not set");`,
 
 // region Errors and rate limits
 export const errorResponse: Snippet = {
-  unconfirmed: false,
   code: `HTTP/1.1 429 Too Many Requests
 Retry-After: 4
 X-Request-Id: 9f2c4e1a7b3d4c5e8f901a2b3c4d5e6f
@@ -223,7 +199,6 @@ X-Request-Id: 9f2c4e1a7b3d4c5e8f901a2b3c4d5e6f
 };
 
 export const backoff: Sample = {
-  unconfirmed: false,
   code: {
     python: `import random
 import time
@@ -265,7 +240,6 @@ export const callWithBackoff = async (send, attempts = 5) => {
 
 // region Migrate from OpenAI
 export const migrate: Sample = {
-  unconfirmed: chatPending,
   code: {
     python: `client = OpenAI(
 -   api_key=os.environ["OPENAI_API_KEY"],
@@ -295,7 +269,6 @@ const response = await client.chat.completions.create({
 
 // region Security
 export const escaping: Sample = {
-  unconfirmed: false,
   code: {
     javascript: `// Model output is untrusted: it can contain markup copied from the prompt.
 const output = response.choices[0].message.content;

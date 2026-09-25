@@ -1,0 +1,22 @@
+import { modelsRequest, modelsResponse } from "../../samples";
+
+<code>GET {"{base_url}"}/models</code> — base URL <Value path="baseUrl" code />
+
+แสดงรายการโมเดลที่คีย์ของคุณใช้ได้ รายการเดียวกันพร้อม context window อยู่ที่หน้า
+[Models](/docs/models)
+
+## Request
+
+ไม่มี body ยืนยันตัวตนตามปกติ
+
+## Response
+
+<CodeBlock label="Response" code={modelsResponse.code} />
+
+## ตัวอย่าง
+
+<CodeTabs sample={modelsRequest} />
+
+## Errors
+
+`401`, `429` และ `503` ตามที่อธิบายไว้ในหน้า [Errors](/docs/errors)

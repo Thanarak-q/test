@@ -1,0 +1,23 @@
+import { migrate } from "../samples";
+
+ถ้าโค้ดของคุณใช้ OpenAI SDK อยู่แล้ว เปลี่ยนมาใช้ได้ด้วยการแก้ 3 จุด
+
+1. **`base_url`** → <Value path="baseUrl" code />
+2. **`api_key`** → คีย์จากหน้า [API Keys](/api-keys)
+3. **`model`** → โมเดลจากหน้า [Models](/docs/models)
+
+<CodeTabs sample={migrate} />
+
+## สิ่งที่ไม่รองรับ
+
+พารามิเตอร์เหล่านี้ไม่รองรับ และคำขอที่มีพารามิเตอร์เหล่านี้จะถูกปฏิเสธ
+
+<Value path="unsupportedParams" />
+
+## สิ่งที่ต่างออกไป
+
+- **โควตาใช้ร่วมกับเว็บแอป** การใช้งานทั้ง API และเว็บดึงจากโควตาโทเคนก้อนเดียวกัน
+  ดู [Models](/docs/models)
+- **Rate limit มี 2 ชั้น** คือคำขอและโทเคน แต่ละชั้นมี headers ของตัวเอง
+  ดู [Rate limits](/docs/rate-limits)
+- **Errors** ใช้รูปแบบและ code ของ API นี้ ดูรายการได้ที่ [Errors](/docs/errors)

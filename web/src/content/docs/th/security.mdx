@@ -1,0 +1,24 @@
+import { envVariable, escaping } from "../samples";
+
+## เก็บคีย์เป็น secret
+
+เก็บคีย์ไว้ใน environment variable หรือ secret manager อย่าเก็บในซอร์สโค้ด repository
+frontend bundle หรือแอปมือถือ
+
+<CodeTabs sample={envVariable} />
+
+## อย่าเชื่อ output ของโมเดล
+
+คำตอบของโมเดลขึ้นกับ input และ input มาจากใครก็ได้ ให้ถือว่า output เป็นข้อมูล
+ไม่ใช่โค้ดหรือ markup ต้อง escape ก่อนแสดงบนหน้าเว็บ และอย่าส่งต่อให้ shell, SQL หรือ `eval`
+
+<CodeTabs sample={escaping} />
+
+## ถ้าคีย์รั่ว
+
+1. **เพิกถอนคีย์** ในหน้า [API Keys](/api-keys) ทันที ก่อนทำอย่างอื่น
+   การเพิกถอนมีผลภายใน <Value path="revokeWindowSeconds" unit="วินาที" />
+2. **สร้างคีย์ใหม่**
+3. **Deploy ใหม่** ด้วยคีย์ใหม่
+
+จากนั้นตรวจหน้า [Usage](/usage) ว่ามีการใช้งานที่คุณไม่รู้จักหรือไม่

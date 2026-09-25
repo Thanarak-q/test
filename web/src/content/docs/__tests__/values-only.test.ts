@@ -22,8 +22,9 @@ const leaves = (value: unknown): (string | number)[] =>
         ? [value]
         : [];
 
-// Words that are both a value and ordinary English in prose.
-const PROSE = new Set(["chat", "embedding", "TBD", "stream", "tools", "functions"]);
+// Words that are both a value and ordinary English in prose. "OpenAI" is the
+// provider, and also the name of the SDKs the migration guide talks about.
+const PROSE = new Set(["chat", "embedding", "TBD", "stream", "tools", "functions", "OpenAI"]);
 const values = [...new Set(leaves(docsValues))].filter(
   (value) => !(typeof value === "string" && PROSE.has(value)) && value !== 0,
 );

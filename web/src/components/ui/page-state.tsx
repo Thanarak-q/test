@@ -1,6 +1,8 @@
 import { CircleAlert, LockKeyhole, RefreshCw } from "lucide-react";
 import { z } from "zod";
 
+import { Mascot } from "@/components/ui/mascot";
+
 export const previewSchema = z
   .enum(["normal", "empty", "loading", "error", "session"])
   .catch("normal")
@@ -24,7 +26,10 @@ export const PageState = ({ state, onRetry }: { state: PreviewState; onRetry: ()
   const session = state === "session";
   return (
     <div className="empty-state" role="alert">
-      <div className="state-icon">{session ? <LockKeyhole /> : <CircleAlert />}</div>
+      <div className="mascot-with-badge">
+        <Mascot size={112} />
+        <span className="state-badge">{session ? <LockKeyhole /> : <CircleAlert />}</span>
+      </div>
       <h2>{session ? "Your session has expired" : "We couldn't load this page"}</h2>
       <p>
         {session

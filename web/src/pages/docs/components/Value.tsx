@@ -1,6 +1,5 @@
 import { isPlaceholder } from "@/content/docs/placeholders";
 import { docsValues } from "@/content/docs/values";
-import { ToBeConfirmed } from "./Badge";
 
 // `path` is a dotted path into values.ts ("limits.tokens.capacity",
 // "models[0].name"), so page content names a value without spelling it out.
@@ -32,7 +31,8 @@ export const Value = ({
   code?: boolean;
 }) => {
   const value = readValue(path);
-  if (isPlaceholder(value, path)) return <ToBeConfirmed />;
+  // The release build refuses to ship placeholders, so this only shows in development.
+  if (isPlaceholder(value, path)) return <>—</>;
   if (Array.isArray(value))
     return (
       <>

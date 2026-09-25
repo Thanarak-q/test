@@ -1,0 +1,18 @@
+import { embeddingsRequest, embeddingsSchema } from "../../samples";
+
+<code>POST {"{base_url}"}/embeddings</code> — base URL <Value path="baseUrl" code />
+
+แปลงข้อความเป็นเวกเตอร์ตัวเลข สำหรับการค้นหา การจัดกลุ่ม หรือการหาความคล้ายกัน
+
+## Request และ response
+
+<CodeBlock label="Schema" code={embeddingsSchema.code} />
+
+## ตัวอย่าง
+
+<CodeTabs sample={embeddingsRequest} />
+
+## Errors
+
+เหมือนกับ [chat completions](/docs/reference/chat) คือ `401`, `413`, `422`, `429` และ `503`
+ดู code ทั้งหมดได้ที่ [Errors](/docs/errors)

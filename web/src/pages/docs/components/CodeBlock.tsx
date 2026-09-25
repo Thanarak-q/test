@@ -1,18 +1,9 @@
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ToBeConfirmed } from "./Badge";
 
 const COPIED_MS = 2_000;
 
-export const CodeBlock = ({
-  code,
-  label,
-  unconfirmed = false,
-}: {
-  code: string;
-  label: string;
-  unconfirmed?: boolean;
-}) => {
+export const CodeBlock = ({ code, label }: { code: string; label: string }) => {
   const [status, setStatus] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -35,7 +26,6 @@ export const CodeBlock = ({
     <figure className="docs-code">
       <figcaption>
         <span>{label}</span>
-        {unconfirmed && <ToBeConfirmed />}
         <button
           type="button"
           className="icon-button"

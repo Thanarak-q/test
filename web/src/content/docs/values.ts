@@ -8,21 +8,25 @@ export const TBD = "TBD" as const;
 
 export const docsValues = {
   baseUrl: "https://api.example.invalid/v1", // TBD: production URL
-  providerName: TBD, // TBD: who receives prompts
-  providerPolicyUrl: TBD, // TBD: provider retention policy
+  providerName: "OpenAI",
+  providerPolicyUrl: "https://openai.com/enterprise-privacy/",
   keyPrefix: "mthw01",
   maxKeysPerUser: 5,
   revokeWindowSeconds: 60,
   retentionDays: { audit: 90, usage: 60 },
   limits: {
-    preAuth: { capacity: 0, refillPerSecond: 0 }, // TBD
-    requests: { capacity: 0, refillPerSecond: 0 }, // TBD
-    tokens: { capacity: 0, refillPerSecond: 0 }, // TBD
-    maxInputTokens: 0, // TBD
+    // api/app/services/pre_auth_rate_limit.py, docs/DECISIONS.md
+    preAuth: { capacity: 60, refillPerSecond: 1 },
+    // api/app/constants/perkey_rate_limit.py
+    requests: { capacity: 10, refillPerMinute: 20 },
+    tokens: { capacity: 20_000, refillPerMinute: 20_000 },
+    maxInputTokens: 8_192,
     maxOutputTokens: 0, // TBD
   },
   models: [
-    { name: "model-a", purpose: "chat", contextWindow: 0 }, // TBD
+    // The llm_models whitelist seeded by the migration.
+    { name: "gpt-4o", purpose: "chat", contextWindow: 128_000 },
+    { name: "gpt-4.1", purpose: "chat", contextWindow: 1_047_576 },
     { name: "embed-a", purpose: "embedding", contextWindow: 0 }, // TBD
   ],
   unsupportedParams: ["stream", "tools", "functions", "n > 1"],

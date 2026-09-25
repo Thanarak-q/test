@@ -1,5 +1,7 @@
+import { BrandMark } from "@/components/ui/mascot";
+import { BookIcon, ChartIcon, KeyIcon } from "@/components/ui/nav-icons";
 import { Link, Outlet } from "@tanstack/react-router";
-import { BookOpen, ChartNoAxesCombined, KeyRound, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 const Navigation = ({ onNavigate }: { onNavigate?: () => void }) => (
@@ -10,7 +12,7 @@ const Navigation = ({ onNavigate }: { onNavigate?: () => void }) => (
       className="nav-item"
       onClick={onNavigate}
     >
-      <KeyRound />
+      <KeyIcon />
       API Keys
     </Link>
     <Link
@@ -19,11 +21,11 @@ const Navigation = ({ onNavigate }: { onNavigate?: () => void }) => (
       className="nav-item"
       onClick={onNavigate}
     >
-      <ChartNoAxesCombined />
+      <ChartIcon />
       Usage
     </Link>
     <Link to="/docs" className="nav-item" onClick={onNavigate}>
-      <BookOpen />
+      <BookIcon />
       Docs
     </Link>
   </nav>
@@ -46,25 +48,11 @@ export const Dashboard = () => {
       </a>
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            m
-          </span>
-          <span>Mathew AI</span>
-          <span className="brand-label">Platform</span>
+          <BrandMark />
+          <span>Mathew API</span>
         </div>
         <div className="workspace-label">Your workspace</div>
         <Navigation />
-        <div className="sidebar-bottom">
-          {/* TODO(session): show the signed-in user from the main application. */}
-          <div className="account">
-            <span className="avatar" aria-hidden="true">
-              <KeyRound />
-            </span>
-            <div>
-              Your account<span>Personal account</span>
-            </div>
-          </div>
-        </div>
       </aside>
       <div className="workspace">
         <div className="mobile-header">
@@ -75,7 +63,8 @@ export const Dashboard = () => {
           >
             <Menu />
           </button>
-          <span>Mathew AI</span>
+          <BrandMark size={22} />
+          <span>Mathew API</span>
         </div>
         <main id="main-content" tabIndex={-1}>
           <Outlet />
@@ -83,7 +72,10 @@ export const Dashboard = () => {
       </div>
       <dialog ref={drawer} className="navigation-drawer" aria-label="Navigation">
         <div className="drawer-header">
-          <span className="brand">Mathew AI</span>
+          <span className="brand">
+            <BrandMark />
+            Mathew API
+          </span>
           <button
             className="icon-button"
             aria-label="Close navigation"

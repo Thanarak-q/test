@@ -50,7 +50,7 @@ it("asks the API for the preset and shows its figures as given", () => {
   expect(api.useGetUsage).toHaveBeenCalledWith({ days: 30, key_id: undefined });
   expect(screen.getByText("750,000")).toBeVisible();
   expect(screen.getByText("66.6%")).toBeVisible();
-  expect(screen.getByText("Mathew AI app")).toBeVisible();
+  expect(screen.getByText("Mathew API app")).toBeVisible();
   expect(screen.getByText("1,000 tokens")).toBeVisible();
   expect(screen.getByText("Production server")).toBeVisible();
 });
